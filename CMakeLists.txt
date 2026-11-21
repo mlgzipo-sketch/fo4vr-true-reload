@@ -37,6 +37,8 @@ add_library(ManualReloadF SHARED
   src/Angles.cpp
   src/Angles.h
   src/GripHook.cpp
+  src/Playback.cpp
+  src/Playback.h
   src/Recorder.cpp
   src/Recorder.h
   src/Magazine.cpp
