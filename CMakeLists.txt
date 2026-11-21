@@ -37,6 +37,14 @@ add_library(ManualReloadF SHARED
   src/Angles.cpp
   src/Angles.h
   src/GripHook.cpp
+  src/Frame.cpp
+  src/Frame.h
+  src/Breech.cpp
+  src/Breech.h
+  src/StateLog.cpp
+  src/StateLog.h
+  src/Editor.cpp
+  src/Editor.h
   src/Playback.cpp
   src/Playback.h
   src/Recorder.cpp
