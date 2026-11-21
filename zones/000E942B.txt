@@ -1,0 +1,4 @@
+; ManualReloadF zones of weapon 000E942B, edited in game
+route breech 8.757 53.049 9.624 10.380 53.049 8.470 11.596 53.049 6.367 12.754 53.049 4.107 13.055 53.049 1.711
+box handle lo 7.032 52.702 8.228 hi 10.028 60.686 11.306
+socket hopper mouth -0.500 52.900 7.900 axis -0.0000 0.0000 1.0000 side 5.000 ahead 4.000

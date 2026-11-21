@@ -1,0 +1,6 @@
+; ManualReloadF zones of weapon 000E5881, edited in game
+magazine lo 1.595 23.096 -7.315 hi 8.215 36.026 -0.924
+slide lo 1.143 23.060 -7.860 hi 8.099 36.568 -1.037
+well side 3.462 ahead 13.456
+well mouth 4.621 36.514 -4.448 axis 0.0000 1.0000 0.0000
+point magtop 4.857 23.096 -4.217

@@ -1,0 +1,6 @@
+; ManualReloadF zones of weapon 000D1EB0, edited in game
+box lever lo -1.248 7.206 9.631 hi 1.174 22.800 11.884
+route lever 0.000 15.750 9.840 0.000 15.840 12.230 0.000 16.740 17.410 0.000 18.590 22.330 0.000 19.720 24.440
+magazine lo -3.274 0.438 6.933 hi 3.257 8.065 11.618
+well side 4.000 ahead 5.197
+well mouth -0.009 4.251 6.912 axis -0.0000 0.0000 1.0000

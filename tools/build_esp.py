@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Build ManualReloadF.esp (no Creation Kit needed).
+
+Records (FormIDs fixed: a save keeps the running quest by id, never renumber):
+  MISC MRF_Mag10mm / MRF_Mag10mmLarge   a dropped magazine as a physical object (vanilla models)
+  SOUN MRF_SndIn / Out / SlideBack / SlideHome / PutAway   the 10mm pistol's own reload sounds
+  FLST MRF_Mags / MRF_Sounds
+  QUST MRF_Quest                        start-game-enabled, runs ManualReloadFMain
+Plain .esp, form version 131, master Fallout4.esm; works in Fallout 4 VR.
+"""
+import struct, sys
+
+OUT = sys.argv[1] if len(sys.argv) > 1 else 'ManualReloadF.esp'
+FORM_VERSION = 131
+OWN = 0x01000000
+
+def zstr(s): return s.encode('latin1') + b'\0'
+def sub(tag, data):
+    assert len(data) < 0x10000
+    return tag.encode() + struct.pack('<H', len(data)) + data
+def record(tag, formid, subs):
+    body = b''.join(subs)
+    return tag.encode() + struct.pack('<IIIIHH', len(body), 0, formid, 0, FORM_VERSION, 0) + body
+def group(tag, records):
+    body = b''.join(records)
+    return b'GRUP' + struct.pack('<I4sIIHH', 24 + len(body), tag.encode(), 0, 0, 0, 0) + body
+
+IDS = {'MRF_Mag10mm': 0x800, 'MRF_Mag10mmLarge': 0x801, 'MRF_SndIn': 0x802, 'MRF_SndOut': 0x803,
+       'MRF_SndSlideBack': 0x804, 'MRF_SndSlideHome': 0x805, 'MRF_SndPutAway': 0x806,
+       'MRF_Mags': 0x807, 'MRF_Sounds': 0x808, 'MRF_Quest': 0x809,
+       'MRF_DescIn': 0x80A, 'MRF_DescOut': 0x80B, 'MRF_DescSlideBack': 0x80C, 'MRF_DescSlideHome': 0x80D,
+       'MRF_Round': 0x80E,
+       'MRF_MagARStraight': 0x80F, 'MRF_MagARDrum': 0x810, 'MRF_MagCombatRifle': 0x811, 'MRF_MagCombatRifleLarge': 0x812,
+       'MRF_MagSMG': 0x813, 'MRF_MagSMGDrum': 0x814, 'MRF_MagDeliverer': 0x815, 'MRF_MagDelivererLarge': 0x816,
+       'MRF_MagPipeShort': 0x817, 'MRF_MagPipe': 0x818, 'MRF_MagPipeDrum': 0x819,
+       'MRF_MagCombatShotgunSmall': 0x81A, 'MRF_MagCombatShotgun': 0x81B, 'MRF_MagCombatShotgunDrum': 0x81C,
+       'MRF_MagHuntingSmall': 0x81D, 'MRF_MagHuntingMedium': 0x81E, 'MRF_MagHuntingLarge': 0x81F,
+       'MRF_MagLaserCell': 0x820, 'MRF_MagSyringer': 0x821, 'MRF_MagFusionCore': 0x822, 'MRF_MagMinigun': 0x823,
+       'MRF_MagPlasma': 0x824, 'MRF_MagGaussSmall': 0x825, 'MRF_MagGaussLarge': 0x826, 'MRF_MagGaussXL': 0x827,
+       'MRF_MagFlamer': 0x828, 'MRF_MagFlamerLarge': 0x829, 'MRF_MagCryo': 0x82A,
+       'MRF_MagCasing': 0x82B, 'MRF_MagSpeedloader': 0x82C, 'MRF_MagHeldRound': 0x82D}
+recs = {}
+def add(tag, edid, subs):
+    fid = OWN | IDS[edid]
+    recs.setdefault(tag, []).append(record(tag, fid, [sub('EDID', zstr(edid))] + subs))
+    return fid
+
+# The order is the magazine kind the plugin sends (kMagModels in ManualReload.cpp); never reorder, add at the end.
+MODELS = [('10mm', 'Weapons\\10mmPistol\\10mmMag01.nif', '10mm Magazine'),
+          ('10mmLarge', 'Weapons\\10mmPistol\\10mmMagLarge.nif', '10mm Large Magazine'),
+          ('ARStraight', 'Weapons\\MachineGun\\MGMagStraight.nif', 'Assault Rifle Magazine'),
+          ('ARDrum', 'Weapons\\MachineGun\\MGMagDrum.nif', 'Assault Rifle Drum Magazine'),
+          ('CombatRifle', 'Weapons\\CombatShotgun\\CombatRifleMagMedium.nif', 'Combat Rifle Magazine'),
+          ('CombatRifleLarge', 'Weapons\\CombatShotgun\\CombatRifleMagLarge.nif', 'Combat Rifle Large Magazine'),
+          ('SMG', 'Weapons\\CombatShotgun\\TGunDrumMagSmall.nif', 'Submachine Gun Magazine'),
+          ('SMGDrum', 'Weapons\\CombatShotgun\\TGunDrumMag.nif', 'Submachine Gun Drum Magazine'),
+          ('Deliverer', 'Weapons\\CovertSidearm\\CovertSidearmMagazine.nif', 'Deliverer Magazine'),
+          ('DelivererLarge', 'Weapons\\CovertSidearm\\CovertSidearmMagazineLarge.nif', 'Deliverer Large Magazine'),
+          ('PipeShort', 'Weapons\\HandMade\\Magazines\\45StraightMagShort.nif', 'Pipe Gun Magazine'),
+          ('Pipe', 'Weapons\\HandMade\\Magazines\\45StraightMag.nif', 'Pipe Gun Large Magazine'),
+          ('PipeDrum', 'weapons\\handmade\\magazines\\PipeRifleDrumMag.nif', 'Pipe Gun Drum Magazine'),
+          ('CombatShotgunSmall', 'Weapons\\CombatShotgun\\CombatShotgunSmallMag.nif', 'Combat Shotgun Magazine'),
+          ('CombatShotgun', 'Weapons\\CombatShotgun\\CombatShotgunMediumMag.nif', 'Combat Shotgun Large Magazine'),
+          ('CombatShotgunDrum', 'Weapons\\CombatShotgun\\DrumMag.nif', 'Combat Shotgun Drum Magazine'),
+          ('HuntingSmall', 'Ammo\\308\\308SmallMag.nif', 'Hunting Rifle Magazine'),
+          ('HuntingMedium', 'Ammo\\308\\308MediumMag.nif', 'Hunting Rifle Medium Magazine'),
+          ('HuntingLarge', 'Ammo\\308\\308LargeMag.nif', 'Hunting Rifle Large Magazine'),
+          ('LaserCell', 'Weapons\\LaserWeapons\\FusionCell.nif', 'Laser Gun Fusion Cell'),
+          ('Syringer', 'Weapons\\HandMade\\Magazines\\SyringerMag.nif', 'Syringer Magazine'),
+          ('FusionCore', 'Ammo\\FusionCore\\FusionCore.nif', 'Gatling Laser Fusion Core'),
+          ('Minigun', 'ManualReloadF\\MinigunDrum.nif', 'Minigun Ammo Drum'),
+          ('Plasma', 'Weapons\\Plasma\\PlasmaCell.nif', 'Plasma Cell'),
+          ('GaussSmall', 'Weapons\\GaussRifle\\GaussRifleMagSmall.nif', 'Gauss Rifle Magazine'),
+          ('GaussLarge', 'Weapons\\GaussRifle\\GaussRifleMagLarge.nif', 'Gauss Rifle Large Magazine'),
+          ('GaussXL', 'Weapons\\GaussRifle\\GaussRifleMagExtraLarge.nif', 'Gauss Rifle Extra Large Magazine'),
+          ('Flamer', 'Weapons\\Flamer\\FlamerPropellentTank.nif', 'Flamer Fuel Tank'),
+          ('FlamerLarge', 'Weapons\\Flamer\\FlamerPropellantTankLarge.nif', 'Flamer Large Fuel Tank'),
+          ('Cryo', 'Ammo\\CryoAmmo\\CryoCell.nif', 'Cryolator Cryo Cell'),
+          # not a magazine: a case thrown out of the gun (the plugin sets its model from the gun's ammo)
+          ('Casing', 'Weapons\\Shells\\10mmShell.nif', 'Spent Casing'),
+          # a revolver's six rounds on their clip, from the belt into the hand (the game's own speedloader)
+          ('Speedloader', 'Ammo\\45Cal\\45Speedloader.nif', 'Speedloader'),
+          # not a magazine: a round from the belt held in the hand (the plugin sets its model from the gun's ammo)
+          ('HeldRound', 'Weapons\\Shells\\10mmShell.nif', 'Round')]
+mags = [add('MISC', 'MRF_Mag' + k, [sub('OBND', b'\0' * 12), sub('FULL', zstr(name)), sub('MODL', zstr(model)),
+                                    sub('DATA', struct.pack('<If', 0, 0.0))]) for k, model, name in MODELS]
+
+# Sound descriptors of Fallout4.esm: WPNPistol10mmReloadMagIn / MagOut / BoltOpen / BoltClose, ItemPickUpMetal1Small.
+# The order is the sound index the plugin sends.
+# Own descriptors for the pistol's reload sounds (the game's wav files): the game's descriptors
+# (WPNPistol10mmReload*, 14 dB down, the weapon reload category) were not heard when played from a script,
+# so these use the category and output of the workshop sounds, which are heard, and are louder.
+W = 'data\\Sound\\FX\\WPN\\Pistol10mm\\Reload\\WPN_Pistol10mm_Reload_'
+def sndr(edid, name):
+    return add('SNDR', edid, [sub('CNAM', bytes.fromhex('0a54ef1e')), sub('GNAM', struct.pack('<I', 0x0172A1)),
+                              sub('ANAM', zstr(W + name + '_01.wav')), sub('ANAM', zstr(W + name + '_02.wav')),
+                              sub('ONAM', struct.pack('<I', 0x05A28A)), sub('LNAM', struct.pack('<I', 0)),
+                              sub('BNAM', struct.pack('<bBBBH', 0, 5, 0x80, 2, 150))])
+SOUNDS = [('MRF_SndIn', sndr('MRF_DescIn', 'MagIn')), ('MRF_SndOut', sndr('MRF_DescOut', 'MagOut')),
+          ('MRF_SndSlideBack', sndr('MRF_DescSlideBack', 'BoltOpen')),
+          ('MRF_SndSlideHome', sndr('MRF_DescSlideHome', 'BoltClose')), ('MRF_SndPutAway', 0x0196B0)]
+sounds = [add('SOUN', e, [sub('OBND', b'\0' * 12), sub('SDSC', struct.pack('<I', s))]) for e, s in SOUNDS]
+
+# The round drawn in the chamber / on the magazine: the plugin sets its model from the gun's ammo before making it.
+round_stat = add('STAT', 'MRF_Round', [sub('OBND', b'\0' * 12), sub('MODL', zstr('Weapons\\10mmPistol\\10mmMag01.nif'))])
+
+def flst(edid, forms):
+    return add('FLST', edid, [sub('LNAM', struct.pack('<I', f)) for f in forms])
+flst_mags = flst('MRF_Mags', mags)
+flst_sounds = flst('MRF_Sounds', sounds)
+
+def wstr(s): b = s.encode('latin1'); return struct.pack('<H', len(b)) + b
+def prop_obj(name, formid): return wstr(name) + bytes([1, 1]) + struct.pack('<HhI', 0, -1, formid)
+props = {'MRF_Mags': flst_mags, 'MRF_Sounds': flst_sounds, 'MRF_Round': round_stat}
+vmad = struct.pack('<hhH', 6, 2, 1) + wstr('ManualReloadFMain') + b'\0' + struct.pack('<H', len(props))
+vmad += b''.join(prop_obj(k, v) for k, v in props.items())
+add('QUST', 'MRF_Quest', [sub('VMAD', vmad), sub('FULL', zstr('Manual Reload F')),
+                          sub('DNAM', bytes.fromhex('110000000000000000000000')), sub('NEXT', b''),
+                          sub('ANAM', struct.pack('<I', 0))])
+
+ORDER = ['SNDR', 'SOUN', 'STAT', 'MISC', 'QUST', 'FLST']
+nrec = sum(len(recs[t]) for t in ORDER)
+tes4 = record('TES4', 0, [sub('HEDR', struct.pack('<fII', 1.0, nrec, max(IDS.values()) + 1)), sub('CNAM', zstr('Aleshon')),
+                          sub('SNAM', zstr('Manual Reload F: reload guns by hand in VR.')),
+                          sub('MAST', zstr('Fallout4.esm')), sub('DATA', b'\0' * 8)])
+with open(OUT, 'wb') as f:
+    f.write(tes4)
+    for t in ORDER:
+        f.write(group(t, recs[t]))
+print('wrote', OUT, nrec, 'records')

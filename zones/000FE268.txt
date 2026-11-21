@@ -1,0 +1,1 @@
+; ManualReloadF zones of weapon 000FE268, written from Blender (scene ManualReload railway rifle)

@@ -1,0 +1,8 @@
+build/
+out/
+package/
+vcpkg/
+vcpkg-cache/
+*.zip
+.vs/
+.vscode/

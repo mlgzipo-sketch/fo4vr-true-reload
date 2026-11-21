@@ -1,0 +1,7 @@
+; ManualReloadF zones of weapon 0009983B, edited in game
+hold 3.9022 -5.9133 -5.0368 -0.97694 -0.05363 0.20666 0.18995 -0.66022 0.72665 0.09747 0.74915 0.65519
+box latch lo -6.368 -1.699 -0.347 hi 2.768 9.599 8.947
+magazine lo -5.537 -0.837 0.563 hi 1.937 8.737 8.037
+well side 3.555 ahead 7.565
+well mouth -0.416 3.950 3.491 axis -0.8598 0.0000 0.5106
+point magtop -0.156 3.837 3.633

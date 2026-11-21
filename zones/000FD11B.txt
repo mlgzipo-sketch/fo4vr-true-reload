@@ -1,0 +1,1 @@
+; ManualReloadF zones of weapon 000FD11B, written from Blender (scene ManualReload broadsider)

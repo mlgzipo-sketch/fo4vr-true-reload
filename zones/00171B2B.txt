@@ -1,0 +1,5 @@
+; ManualReloadF zones of weapon 00171B2B, written from Blender (scene ManualReload cryolator)
+magazine lo -11.155 10.846 -6.716 hi -5.323 14.693 -2.811
+slide lo -11.097 10.856 -6.754 hi -7.150 14.683 -2.773
+well side 2.671 ahead 6.141
+well mouth -5.316 12.770 -4.763 axis -1.0000 0.0000 0.0000

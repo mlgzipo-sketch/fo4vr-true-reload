@@ -1,0 +1,5 @@
+; ManualReloadF zones of weapon 0014D09E, written from Blender (scene ManualReload syringer)
+point chamber1 -0.100 15.500 5.250
+magazine lo -8.900 6.500 4.900 hi -0.400 15.800 6.200
+well side 2.000 ahead 3.000
+well mouth -3.300 11.150 5.550 axis -1.0000 0.0000 -0.0000

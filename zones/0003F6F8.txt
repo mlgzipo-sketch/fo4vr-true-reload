@@ -1,0 +1,6 @@
+; ManualReloadF zones of weapon 0003F6F8, edited in game
+roundhold 1.3499 -6.4921 -4.2774 0.35745 -0.30705 0.88202 0.09669 -0.92717 -0.36195 0.92892 0.21466 -0.30173
+box breech lo -2.405 2.485 18.836 hi 2.322 4.677 20.643
+route breech -0.197 6.801 25.660 -0.026 4.810 23.367 0.033 3.424 19.879
+socket missile mouth 0.388 16.947 11.192 axis 0.0000 -1.0000 -0.0000 side 3.965 ahead 16.997
+point hinge 0.185 28.400 12.730

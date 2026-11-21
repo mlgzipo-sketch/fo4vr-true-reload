@@ -1,0 +1,6 @@
+; ManualReloadF zones of weapon 0001F669, edited in game
+box crank lo -10.271 -6.899 -29.987 hi -7.606 -3.213 -15.571
+magazine lo -22.932 5.852 -37.477 hi 5.759 27.563 -8.885
+well side 14.141 ahead 13.090
+well mouth -8.455 10.322 -23.181 axis 0.0000 -1.0000 -0.0000
+point magtop -8.257 25.613 -23.167

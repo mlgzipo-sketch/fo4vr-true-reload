@@ -1,0 +1,4 @@
+; ManualReloadF zones of weapon 0014831A, written from Blender (scene ManualReload pipe bolt action)
+point chamber1 0.000 16.100 1.000
+slide lo -3.991 12.304 0.538 hi -1.580 13.368 1.793
+slide route -3.500 12.814 1.000 -3.381 12.814 1.906 -3.031 12.814 2.750 -2.475 12.814 3.475 -1.938 12.814 3.883 -1.938 6.800 3.883

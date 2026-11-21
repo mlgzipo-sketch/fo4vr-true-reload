@@ -1,0 +1,8 @@
+; ManualReloadF zones of weapon 0004F46A, edited in game
+magazine lo -1.251 9.569 -1.607 hi 1.151 15.943 1.322
+well side 2.873 ahead 6.031
+well mouth 0.147 12.833 0.890 axis -0.0000 0.0409 -0.9992
+point magtop -0.006 12.372 6.564
+slide lo -3.621 4.575 0.177 hi -2.149 6.166 1.603
+point maghold -0.050 12.780 -0.731
+slide route -2.900 5.350 0.900 -3.416 5.350 1.592 -3.769 5.350 2.379 -3.944 5.350 3.223 -3.932 5.350 4.086 -3.932 -0.650 4.086
