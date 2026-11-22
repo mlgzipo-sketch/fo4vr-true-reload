@@ -433,7 +433,15 @@ namespace mrf
     {
         auto& st = g_state;
         st.ghostCount = 0;
-        // the mouth in the gun root's frame, where ROCK's boxes are
+        // the way the magazine's top comes in, from a little below the mouth to a little inside, in the gun root's
+        // frame where ROCK's boxes are: every collider it would run into there (0.60 tested the mouth alone and
+        // missed the laser's receiver, the cell comes in from the side)
+        constexpr int kSamples = 7;
+        RE::NiPoint3 way[kSamples];
+        for (int i = 0; i < kSamples; ++i) {
+            const float s = st.length + 4.0f - 6.0f * static_cast<float>(i) / static_cast<float>(kSamples - 1);
+            way[i] = relative(root->world, pointTransform(topOf(railPose(root, std::max(0.0f, s))))).translate;
+        }
         const auto mouth = relative(root->world, pointTransform(topOf(railPose(root, st.length)))).translate;
         const float p[3]{ mouth.x, mouth.y, mouth.z };
         std::string names;
@@ -444,9 +452,14 @@ namespace mrf
             if (source.kind == 7) {
                 continue;   // the gun's own magazine: off anyway while none is in
             }
-            bool inside = true;
-            for (int k = 0; k < 3; ++k) {
-                inside = inside && p[k] > source.lo[k] - 1.0f && p[k] < source.hi[k] + 1.0f;
+            bool inside = false;
+            for (int i = 0; i < kSamples && !inside; ++i) {
+                const float q[3]{ way[i].x, way[i].y, way[i].z };
+                bool in = true;
+                for (int k = 0; k < 3; ++k) {
+                    in = in && q[k] > source.lo[k] - 1.0f && q[k] < source.hi[k] + 1.0f;
+                }
+                inside = in;
             }
             if (inside) {
                 st.ghostKeys[st.ghostCount++] = source.key;
@@ -457,8 +470,9 @@ namespace mrf
         static std::string told = "-";
         if (names != told) {
             told = names;
-            note("WELL: mouth at (%.1f %.1f %.1f) in the gun; a magazine lined up under it goes through %d collider(s): %s", p[0], p[1], p[2], st.ghostCount,
-                names.empty() ? "none (the gun stays solid)" : names.c_str());
+            note("WELL: mouth at (%.1f %.1f %.1f) in the gun; a magazine lined up under it goes through %d collider(s): %s (of %zu with a box)", p[0], p[1],
+                p[2], st.ghostCount, names.empty() ? "none (the gun stays solid, the catch reaches as far as before)" : names.c_str(),
+                rocklink::bodiedSources().size());
         }
     }
 
@@ -539,7 +553,7 @@ namespace mrf
                         }
                         st.wellNearAt = now;
                     }
-                    const bool ghosted = g_settings.ghostGun && now - st.wellNearAt < std::chrono::milliseconds(250) &&
+                    const bool ghosted = g_settings.ghostGun && st.ghostCount > 0 && now - st.wellNearAt < std::chrono::milliseconds(250) &&
                                          now - st.ghostSince > std::chrono::milliseconds(150);
                     const float catchAhead = ghosted ? std::min(ahead, g_settings.ghostCatchAhead) : ahead;
                     if (upright && side <= sideMax && top <= mouth + catchAhead && top >= mouth - below) {

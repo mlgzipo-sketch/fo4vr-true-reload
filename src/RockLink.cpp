@@ -59,6 +59,7 @@ namespace rocklink
         bool g_suppressing{ false };   // the magazine's collider is switched off (setCollision)
         bool g_ghosting{ false };      // ..every collider of the gun
         std::vector<BodiedSource> g_bodied;     // the weapon's nodes with a collider of their own
+        std::vector<std::pair<std::string, std::uint64_t>> g_sourceNames;   // every source of the weapon by name
         std::uint32_t g_lastStatus[8]{ 999, 999, 999, 999, 999, 999, 999, 999 };
 
         void say(const char* format, ...) noexcept
@@ -153,9 +154,10 @@ namespace rocklink
             }
             int magazines = 0;
             int bolts = 0;
-            g_bodied.clear();
+            g_sourceNames.clear();
             for (std::uint32_t i = 0; i < count && i < total; ++i) {
                 const auto& source = sources[i];
+                g_sourceNames.emplace_back(std::string(source.name, strnlen(source.name, sizeof(source.name))), source.sourceKey);
                 if (f.magazine.node && std::strncmp(source.name, f.magazine.node, sizeof(source.name)) == 0) {
                     if (magazines++ == 0) g_magazineKey = source.sourceKey;
                 }
@@ -249,11 +251,23 @@ namespace rocklink
                 }
                 char name[65]{};
                 std::memcpy(name, d.sourceName, 64);
-                if (d.localBoundsGame.valid && d.sourceKey != 0) {
-                    const auto& b = d.localBoundsGame;
-                    g_bodied.push_back(BodiedSource{ d.sourceKey, name, d.partKind, { b.min.x, b.min.y, b.min.z }, { b.max.x, b.max.y, b.max.z } });
+                std::uint64_t key = d.sourceKey;
+                if (key == 0) {
+                    // no key with the evidence: the source of that name (a shape's name, its node's name without ':0')
+                    std::string bare(name);
+                    if (const auto colon = bare.rfind(':'); colon != std::string::npos) bare.resize(colon);
+                    for (const auto& [sourceName, sourceKey] : g_sourceNames) {
+                        if (sourceName == name || sourceName == bare) {
+                            key = sourceKey;
+                            break;
+                        }
+                    }
                 }
-                say("  part %u: kind %u action %u reload %u support %u socket %u body %u node '%s' box (%.1f %.1f %.1f)..(%.1f %.1f %.1f)%s", i, d.partKind,
+                if (d.localBoundsGame.valid && key != 0) {
+                    const auto& b = d.localBoundsGame;
+                    g_bodied.push_back(BodiedSource{ key, name, d.partKind, { b.min.x, b.min.y, b.min.z }, { b.max.x, b.max.y, b.max.z } });
+                }
+                say("  part %u (source %016llX): kind %u action %u reload %u support %u socket %u body %u node '%s' box (%.1f %.1f %.1f)..(%.1f %.1f %.1f)%s", i, static_cast<unsigned long long>(key), d.partKind,
                     d.actionRole, d.reloadRole, d.supportRole, d.socketRole, d.bodyId, name, d.localBoundsGame.min.x, d.localBoundsGame.min.y,
                     d.localBoundsGame.min.z, d.localBoundsGame.max.x, d.localBoundsGame.max.y, d.localBoundsGame.max.z,
                     d.localBoundsGame.valid ? "" : " (no box)");
