@@ -60,7 +60,7 @@ namespace mrf
         const auto device = controllerOf(index);
         if (device != vr::k_unTrackedDeviceIndexInvalid) {
             vr::VRControllerState_t state{};
-            if (griphook::rawState(device, &state, sizeof(state)) || (g_vr && g_vr->GetControllerState(device, &state, sizeof(state)))) {
+            if ((!g_settings.injectedInput && griphook::rawState(device, &state, sizeof(state))) || (g_vr && g_vr->GetControllerState(device, &state, sizeof(state)))) {
                 hand.buttons = state.ulButtonPressed;
                 for (int a = 0; a < 5; ++a) {
                     hand.axes[a] = RE::NiPoint3{ state.rAxis[a].x, state.rAxis[a].y, 0.0f };

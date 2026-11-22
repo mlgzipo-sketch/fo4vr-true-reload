@@ -71,7 +71,8 @@ namespace mrf
         int   markButton{ 32 };         // the free hand's stick click: writes a numbered mark and the whole state to the log
         bool  blockAnimReload{ true };  // the game's reload event of a gun reloaded by hand is refused (no vanilla animation)
         bool  traceAnim{ false };
-        int   lateGripMs{ 400 };      // a grip closed this long before the palm reached the magazine / the belt still takes it       // every animation event of the player to the log
+        int   lateGripMs{ 400 };
+        bool  injectedInput{ false };   // buttons read as the game sees them (devbench test input), not from the controller itself      // a grip closed this long before the palm reached the magazine / the belt still takes it       // every animation event of the player to the log
         bool  traceState{ true };       // every change of what the plugin thinks (where the magazine is, the slide, who holds what)    // the palm this close to a part's box touches it (gun units)
         bool  recordedBolt{ true };     // the bolt / slide moves along the recorded way (a bolt action lifts, then goes back)
         bool  autoRecord{ true };       // a gun whose reload is not recorded yet is left to the game for one reload, which is recorded
