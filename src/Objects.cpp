@@ -78,7 +78,7 @@ namespace mrf
     RE::NiPoint3 palmGripPoint(const RE::NiAVObject* object, const RE::NiPoint3& palm) noexcept
     {
         const auto c = object->worldBound.center;
-        const float r = object->worldBound.radius;
+        const float r = object->worldBound.fRadius;
         const auto off = palm - c;
         const float d = distance(palm, c);
         if (r <= 0.0f || d <= 0.8f * r) {
