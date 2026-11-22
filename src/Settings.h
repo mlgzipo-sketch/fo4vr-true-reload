@@ -104,6 +104,12 @@ namespace mrf
         float roundRotY{ 0.0f };
         float roundRotZ{ 0.0f };
         float roundScale{ 1.0f };
+        bool  pinchHandle{ true };      // a rifle's charging handle / bolt knob is taken with thumb and index, not the fist
+        float pinchThumb{ 0.45f };      // finger openness for it (0 curled, 1 open)
+        float pinchIndex{ 0.4f };
+        float pinchOthers{ 0.75f };
+        float jamTilt{ 65.0f };         // a stuck case stands this much (degrees) out of the port, a misfed round is nosed up
+        float jamOut{ 1.6f };           // ..and this far up out of it (gun units)
         bool  realRounds{ true };       // rounds from the belt (shells, a revolver's clip, a missile, a cell) are real objects ROCK holds
         bool  casings{ true };          // racking, a break action or a revolver emptied: cases (and unfired rounds) fly out as objects
         float casingImpulse{ 0.4f };    // how hard they are thrown (Havok impulse)

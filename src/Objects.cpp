@@ -431,7 +431,8 @@ namespace mrf
         const bool open = st.slideLocked || st.rackPull >= g_settings.rackTravel * std::clamp(g_settings.roundOpenAt, 0.05f, 1.0f);
         const bool inChamber = (st.chamber || st.jam == 2) && !st.rackCycled;   // a stuck case is seen in the port
         const bool onMagazine = !inChamber && st.place == kSeated && st.rounds > 0;
-        const bool visible = open && (inChamber || onMagazine);
+        const bool jammed = st.jam != 0 && st.place == kSeated;   // a jam is always seen: it is no bug, the slide must be racked
+        const bool visible = jammed || (open && (inChamber || onMagazine));
 
         if (!g_round.ref) {
             const auto now = Clock::now();
@@ -470,14 +471,21 @@ namespace mrf
         auto top = compose(root->world, st.magRest);
         const auto up = axisOf(top, 2);
         RE::NiPoint3 at = top.translate + up * ((st.topAt + g_settings.roundUp) * top.scale);
-        if (inChamber) {
+        if (inChamber || jammed) {
             at += axisOf(root->world, 2) * (g_settings.chamberUp * scale) + axisOf(root->world, 1) * (g_settings.chamberForward * scale);
+        }
+        if (jammed) {
+            // the stuck case stands up out of the port; the misfed round lies nosed up against the breech
+            at += axisOf(root->world, 2) * ((st.jam == 2 ? g_settings.jamOut : g_settings.jamOut * 0.5f) * scale);
         }
         const float d = 0.01745329f;
         Mat turn = axisRotation(0, g_settings.roundRotX * d);
         turn = mul(turn, axisRotation(1, g_settings.roundRotY * d));
         turn = mul(turn, axisRotation(2, g_settings.roundRotZ * d));
         RE::NiTransform pose = identityTransform();
+        if (jammed) {
+            turn = mul(turn, axisRotation(0, (st.jam == 2 ? g_settings.jamTilt : g_settings.jamTilt * 0.4f) * d));
+        }
         pose.rotate = fromMat(mul(turn, toMat(root->world.rotate)));
         pose.translate = at;
         pose.scale = scale * (g_settings.roundScale > 0.0f ? g_settings.roundScale : 1.0f);

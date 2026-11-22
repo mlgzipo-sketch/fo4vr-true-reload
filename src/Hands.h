@@ -61,5 +61,7 @@ namespace mrf
 
     void unpinHand() noexcept;
 
-    void poseFingers(bool on) noexcept;
+    // pinch: thumb and index on a small handle (a rifle's charging handle or bolt knob), the other fingers kept
+    // out of the gun, instead of the whole hand closed round it
+    void poseFingers(bool on, bool pinch = false) noexcept;
 }

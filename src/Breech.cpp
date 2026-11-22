@@ -873,7 +873,9 @@ namespace mrf
                 } else {
                     b.held = take;
                     dropHandRound("a new one from the belt");
-                    g_beltRound.wanted = g_settings.realRounds;
+                    // a revolver drawn with its own clip (WeaponMagazineChild3): that clip is shown in the hand, not
+                    // the game's .45 speedloader, which fits no other gun
+                    g_beltRound.wanted = g_settings.realRounds && !(revolver && looksLikeObject(child[2]));
                     playSound(4);
                     buzz(freeIndex(), 1200);
                     note("BELT: %u round(s) in the free hand", take);

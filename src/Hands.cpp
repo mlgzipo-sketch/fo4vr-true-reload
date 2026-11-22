@@ -131,6 +131,7 @@ namespace mrf
     }
 
     bool g_posed{ false };
+    bool g_posedPinch{ false };
 
     void pinHand(const RE::NiTransform& wrist) noexcept
     {
@@ -167,13 +168,27 @@ namespace mrf
         g_pinned = false;
     }
 
-    void poseFingers(bool on) noexcept
+    void poseFingers(bool on, bool pinch) noexcept
     {
         const auto* frik = FRIKApiV2::inst;
-        if (!frik || on == g_posed) {
+        if (!frik || (on == g_posed && (!on || pinch == g_posedPinch))) {
             return;
         }
-        if (on && frik->setHandPoseCustom) {
+        if (on && pinch && frik->setHandPoseCustom) {
+            // 0 = curled, 1 = open
+            FRIKApiV2::HandPoseData pose{};
+            const float t = std::clamp(g_settings.pinchThumb, 0.0f, 1.0f);
+            const float i = std::clamp(g_settings.pinchIndex, 0.0f, 1.0f);
+            const float o = std::clamp(g_settings.pinchOthers, 0.0f, 1.0f);
+            pose.thumb = { t, t, t, 0.0f };
+            pose.index = { i, i, i, 0.0f };
+            pose.middle = { o, o, o, 0.0f };
+            pose.ring = { std::min(o + 0.05f, 1.0f), std::min(o + 0.05f, 1.0f), std::min(o + 0.05f, 1.0f), 0.0f };
+            pose.pinky = { std::min(o + 0.1f, 1.0f), std::min(o + 0.1f, 1.0f), std::min(o + 0.1f, 1.0f), 0.0f };
+            g_posed = frik->setHandPoseCustom(kFrikTag, frikHand(freeIndex()), pose, 120);
+            g_posedPinch = g_posed;
+        } else if (on && frik->setHandPoseCustom) {
+            g_posedPinch = false;
             const float c = std::clamp(g_settings.fingerCurl, 0.0f, 1.0f);
             FRIKApiV2::HandPoseData pose{};
             const float t = std::min(c + 0.25f, 1.0f);

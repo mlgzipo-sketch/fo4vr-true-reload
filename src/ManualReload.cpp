@@ -420,6 +420,7 @@ namespace
                         ammo = 0;
                         gun.data->ammoCount = 0;
                         buzz(g_settings.gunHand, 2500);
+                        hud(st.jam == 2 ? "Jam: a case stuck in the port, rack the slide" : "Jam: the round did not feed, rack the slide");
                         note("JAM: %s (rack the slide)", st.jam == 2 ? "the case stuck in the ejection port" : "the round did not feed");
                     }
                 } else if (ammo != 0) {
@@ -906,7 +907,9 @@ namespace
             st.railPinned = false;
             st.alignActive = false;
         }
-        poseFingers(!rockHolds && (st.place == kRailHand || st.place == kHand || st.racking || st.leverHeld));
+        float handlePoint[3]{};
+        const bool pinch = g_settings.pinchHandle && (g_rock.onBolt || st.racking) && rocklink::boltHandle(handlePoint);
+        poseFingers(pinch || (!rockHolds && (st.place == kRailHand || st.place == kHand || st.racking || st.leverHeld)), pinch);
         // a magazine on the rail is moved by the plugin alone: if ROCK saw the grip it would take the gun's
         // magazine part with this hand and pull it straight back out (the laser cell, 0.35)
         if (st.place == kRailHand && free.grip && !griphook::owned()) {
