@@ -80,7 +80,9 @@ namespace
             return;
         }
         takeScriptNews();
+        reloadSettingsIfChanged();
         tidyCasings(Clock::now());
+        throwCasings(Clock::now());
         tidyLooseRounds(Clock::now());
         readHand(0);
         readHand(1);
@@ -998,6 +1000,7 @@ namespace
             // no magazine is drawn in the gun (none, or the real one is in the hand): its collider is switched off as well
             const bool magHidden = looksLikeObject(magazine) && (magazine->flags.flags & 1ull) != 0;
             link.noMagazine = (st.place == kGone || (st.place == kHand && magHidden));
+            link.ghostGun = g_settings.ghostGun && now - st.wellNearAt < std::chrono::milliseconds(250);
             g_rock = rocklink::frame(link);
         }
 

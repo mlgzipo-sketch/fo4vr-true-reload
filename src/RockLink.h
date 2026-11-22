@@ -37,6 +37,7 @@ namespace rocklink
         Part magazine{};            // group 1
         Part bolt{};                // group 2
         bool noMagazine{ false };   // the magazine is not seated: the gun's own magazine collider is switched off
+        bool ghostGun{ false };     // a real magazine is at the well: every collider of the gun is off, so it can go in
     };
 
     struct Result
@@ -65,4 +66,7 @@ namespace rocklink
     std::uint32_t heldBy(int hand) noexcept;
     // ROCK lets go of that reference.
     bool releaseHeld(int hand, std::uint32_t refFormId) noexcept;
+    // ROCK glides a loose object no hand holds toward `rotate`/`translate` (world, game units) with time constant
+    // `approach` seconds: its velocities are set this step, so a far target throws it. Call each frame; stop to let it fly.
+    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach) noexcept;
 }

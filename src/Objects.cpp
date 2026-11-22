@@ -55,6 +55,53 @@ namespace mrf
 
     std::deque<Casing> g_casings;
 
+    namespace
+    {
+        struct CasingThrow
+        {
+            std::int32_t      token{ 0 };
+            RE::NiPoint3      way{};
+            float             spin{ 0.0f };
+        };
+        std::deque<CasingThrow> g_casingWays;   // asked for, not here yet: which way each is thrown
+
+        struct Flying
+        {
+            std::uint32_t     ref{ 0 };
+            RE::NiPoint3      way{};
+            float             spin{ 0.0f };
+            Clock::time_point since{};
+        };
+        std::vector<Flying> g_flying;   // being thrown by ROCK right now
+    }
+
+    void throwCasings(Clock::time_point now) noexcept
+    {
+        const auto drive = std::chrono::milliseconds(std::max(0, g_settings.casingThrowMs));
+        for (auto it = g_flying.begin(); it != g_flying.end();) {
+            auto* ref = now - it->since < drive ? lookupRef(it->ref) : nullptr;
+            auto* node = ref ? ref->Get3D() : nullptr;
+            if (!looksLikeObject(node)) {
+                it = g_flying.erase(it);
+                continue;
+            }
+            // the target is where the case would be after `tau` at the wanted speed: ROCK gives it that velocity
+            constexpr float tau = 0.1f;
+            RE::NiTransform target = node->world;
+            target.translate = node->world.translate + it->way * (g_settings.casingSpeed * tau);
+            const float a = it->spin * tau;
+            RE::NiTransform turn = identityTransform();
+            setRows(turn, RE::NiPoint3{ 1.0f, 0.0f, 0.0f }, RE::NiPoint3{ 0.0f, std::cos(a), std::sin(a) }, RE::NiPoint3{ 0.0f, -std::sin(a), std::cos(a) });
+            target = compose(target, turn);
+            const auto pose = toLinkPose(target);
+            if (!rocklink::driveLoose(it->ref, pose.rotate, pose.translate, tau)) {
+                it = g_flying.erase(it);   // ROCK cannot: the Havok push from the script is all it gets
+                continue;
+            }
+            ++it;
+        }
+    }
+
     RE::TESAmmo* g_casingModelFor{ nullptr };
 
     bool g_casingModelReady{ false };
@@ -113,6 +160,13 @@ namespace mrf
             const float wobble = 0.15f * spread;
             command.impulse = { dir.x + wobble, dir.y, dir.z, g_settings.casingImpulse };
             pushCommand(command);
+            // a case flies out a little up and back, each a little differently, tumbling
+            const float jitter = 0.12f * static_cast<float>(std::abs(command.token * 7919) % 11 - 5) / 5.0f;
+            auto way2 = normalized(dir + axisOf(root->world, 2) * 0.35f + axisOf(root->world, 1) * (-0.15f + jitter));
+            g_casingWays.push_back(CasingThrow{ command.token, way2, g_settings.casingSpin * (i % 2 ? -1.0f : 1.0f) * (1.0f + jitter) });
+            while (g_casingWays.size() > 32) {
+                g_casingWays.pop_front();
+            }
         }
         note("CASINGS: %u out (%s)", count, why);
     }
@@ -435,7 +489,19 @@ namespace mrf
                 continue;
             }
             if (mag.token <= kCasingTokenBase) {
-                g_casings.push_back(Casing{ mag.ref, Clock::now() });
+                Casing casing{ mag.ref, Clock::now() };
+                for (auto it = g_casingWays.begin(); it != g_casingWays.end(); ++it) {
+                    if (it->token == mag.token) {
+                        casing.way = it->way;
+                        casing.spin = it->spin;
+                        if (g_settings.casingSpeed > 0.0f) {
+                            g_flying.push_back(Flying{ mag.ref, it->way, it->spin, Clock::now() });
+                        }
+                        g_casingWays.erase(it);
+                        break;
+                    }
+                }
+                g_casings.push_back(casing);
                 continue;
             }
             Loose loose;

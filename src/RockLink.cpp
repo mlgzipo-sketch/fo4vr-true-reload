@@ -55,6 +55,8 @@ namespace rocklink
         std::string g_lastGrip;
         std::string g_lastDrive;
         bool g_suppressing{ false };   // the magazine's collider is switched off (setCollision)
+        bool g_ghosting{ false };      // ..every collider of the gun
+        std::vector<std::uint64_t> g_topKeys;   // the weapon's nodes right under its root (each covers its subtree)
         std::uint32_t g_lastStatus[8]{ 999, 999, 999, 999, 999, 999, 999, 999 };
 
         void say(const char* format, ...) noexcept
@@ -149,8 +151,12 @@ namespace rocklink
             }
             int magazines = 0;
             int bolts = 0;
+            g_topKeys.clear();
             for (std::uint32_t i = 0; i < count && i < total; ++i) {
                 const auto& source = sources[i];
+                if (source.parentKey == 0 && g_topKeys.size() < parts::kMaxCollisionSources) {
+                    g_topKeys.push_back(source.sourceKey);
+                }
                 if (f.magazine.node && std::strncmp(source.name, f.magazine.node, sizeof(source.name)) == 0) {
                     if (magazines++ == 0) g_magazineKey = source.sourceKey;
                 }
@@ -158,6 +164,7 @@ namespace rocklink
                     if (bolts++ == 0) g_boltKey = source.sourceKey;
                 }
             }
+            say("ROCK: %zu nodes right under the weapon's root (the whole gun's collision goes off through them)", g_topKeys.size());
             say("ROCK: %u nodes in the weapon; '%s' x%d (key %016llX), '%s' x%d (key %016llX)", count, f.magazine.node ? f.magazine.node : "-",
                 magazines, g_magazineKey, f.bolt.node ? f.bolt.node : "-", bolts, g_boltKey);
         }
@@ -266,6 +273,8 @@ namespace rocklink
                 g_parts->clearCollisionSuppression(g_client.owner(), kSlot);
             }
             g_suppressing = false;
+            g_ghosting = false;
+            g_topKeys.clear();
             g_registered = false;
             g_driving = false;
             g_config.clear();
@@ -342,11 +351,13 @@ namespace rocklink
             if (!g_parts->setCollisionSuppression) {
                 return;
             }
-            if (!f.noMagazine || g_magazineKey == 0) {
-                if (g_suppressing) {
-                    g_suppressing = false;
-                    answer(5, "the magazine's collider is back (clearCollisionSuppression)", g_parts->clearCollisionSuppression(g_client.owner(), kSlot));
-                    g_lastStatus[6] = 999;
+            const bool ghost = f.ghostGun && !g_topKeys.empty();
+            const bool mag = f.noMagazine && g_magazineKey != 0;
+            if (!ghost && !mag) {
+                if (g_suppressing || g_ghosting) {
+                    g_suppressing = g_ghosting = false;
+                    answer(5, "the gun's colliders are back (clearCollisionSuppression)", g_parts->clearCollisionSuppression(g_client.owner(), kSlot));
+                    g_lastStatus[6] = g_lastStatus[7] = 999;
                 }
                 return;
             }
@@ -355,12 +366,21 @@ namespace rocklink
                 return;
             }
             request.leaseFrames = 2;
-            request.sourceCount = 1;
             request.weaponGenerationKey = g_key;
-            request.sourceKeys[0] = g_magazineKey;
+            if (ghost) {
+                for (const auto key : g_topKeys) {
+                    request.sourceKeys[request.sourceCount++] = key;
+                }
+            } else {
+                request.sourceKeys[request.sourceCount++] = g_magazineKey;
+            }
             g_suppressing = true;
-            answer(6, "the missing magazine's collider is off (setCollisionSuppression)", g_parts->setCollisionSuppression(g_client.owner(), kSlot, &request));
+            g_ghosting = ghost;
+            answer(ghost ? 7 : 6, ghost ? "a magazine at the well: the whole gun's collision is off (setCollisionSuppression)" :
+                                          "the missing magazine's collider is off (setCollisionSuppression)",
+                g_parts->setCollisionSuppression(g_client.owner(), kSlot, &request));
             g_lastStatus[5] = 999;
+            g_lastStatus[ghost ? 6 : 7] = 999;
         }
 
         void setDrives(const Frame& f) noexcept
@@ -647,5 +667,38 @@ namespace rocklink
         say("ROCK: force release of the %s hand: status %u", hand == 0 ? "right" : "left", static_cast<unsigned>(status));
         return status == api::Status::Ok;
     }
-}
 
+    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach) noexcept
+    {
+        if (!g_grab || !g_grab->driveReleasedObject || !g_grab->queryReferenceInteraction || !refFormId) {
+            return false;
+        }
+        api::grab::ReferenceQuery query{};
+        query.referenceFormId = refFormId;
+        api::grab::ReferenceInteraction found{};
+        const auto queried = g_grab->queryReferenceInteraction(g_client.owner(), &query, &found);
+        api::Sample sample{};
+        const auto sampled = g_grab->getSample ? g_grab->getSample(g_client.owner(), &sample) : api::Status::Ok;
+        api::grab::ReleasedObjectDrive drive{};
+        drive.reference.referenceFormId = refFormId;
+        drive.reference.referenceNativeHandle = found.referenceNativeHandle;
+        drive.reference.worldGeneration = found.worldGeneration ? found.worldGeneration : sample.worldGeneration;
+        drive.reference.skeletonGeneration = sample.skeletonGeneration;
+        drive.reference.providerGeneration = sample.providerGeneration;
+        drive.expectedBase = found.baseFormId;
+        drive.approachSeconds = approach < 0.05f ? 0.05f : (approach > 2.0f ? 2.0f : approach);
+        std::memcpy(drive.rootWorld.rotate, rotate, sizeof(drive.rootWorld.rotate));
+        std::memcpy(drive.rootWorld.translate, translate, sizeof(drive.rootWorld.translate));
+        drive.rootWorld.scale = 1.0f;
+        const auto status = g_grab->driveReleasedObject(g_client.owner(), &drive, nullptr);
+        static std::uint32_t told[4]{ 999, 999, 999, 999 };   // each answer once (query, sample, drive) so the log stays short
+        if (static_cast<std::uint32_t>(status) != told[0] || static_cast<std::uint32_t>(queried) != told[1] || static_cast<std::uint32_t>(sampled) != told[2]) {
+            told[0] = static_cast<std::uint32_t>(status);
+            told[1] = static_cast<std::uint32_t>(queried);
+            told[2] = static_cast<std::uint32_t>(sampled);
+            say("ROCK: a thrown case is driven (driveReleasedObject): status %u (query %u, handle %08X, sample %u)", told[0], told[1],
+                found.referenceNativeHandle, told[2]);
+        }
+        return status == api::Status::Ok;
+    }
+}

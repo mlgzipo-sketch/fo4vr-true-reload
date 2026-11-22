@@ -493,7 +493,18 @@ namespace mrf
                     }
                     g_liveTop = catchPointOf(node, false);
                     g_liveTopAt = now;
-                    if (upright && side <= sideMax && top <= mouth + ahead && top >= mouth - below) {
+                    // at the well the gun's collision is switched off (ROCK), so the magazine itself goes into the mouth:
+                    // then it is caught there, not pulled in from a hand's width away (0.58)
+                    if (g_settings.ghostGun && top < mouth + ahead + g_settings.ghostReach && side < sideMax + g_settings.ghostReach) {
+                        if (now - st.wellNearAt > std::chrono::milliseconds(250)) {
+                            st.ghostSince = now;
+                        }
+                        st.wellNearAt = now;
+                    }
+                    const bool ghosted = g_settings.ghostGun && now - st.wellNearAt < std::chrono::milliseconds(250) &&
+                                         now - st.ghostSince > std::chrono::milliseconds(150);
+                    const float catchAhead = ghosted ? std::min(ahead, g_settings.ghostCatchAhead) : ahead;
+                    if (upright && side <= sideMax && top <= mouth + catchAhead && top >= mouth - below) {
                         st.rounds = loose.rounds;
                         st.place = kRailHand;
                         st.railHandSince = Clock::now();
@@ -521,14 +532,15 @@ namespace mrf
                         pushCommand(command);
                         griphook::setOwned(true);
                         buzz(freeIndex(), 900);
-                        note("CATCH: the well has the real magazine %08X (%u rounds), %.1f out, %.1f off the line", id, st.rounds, st.s, side);
+                        note("CATCH: the well has the real magazine %08X (%u rounds), %.1f out, %.1f off the line%s", id, st.rounds, st.s, side,
+                            ghosted ? " (gun collision off: caught at the mouth)" : "");
                         continue;
                     }
                     static Clock::time_point missTold{};
                     if (top < mouth + ahead + 6.0f && side < sideMax + 6.0f && now - missTold > std::chrono::milliseconds(400)) {
                         missTold = now;   // near the well and not taken: why
                         note("NEAR WELL: magazine %08X top %.1f past the mouth (catch from %.1f), %.1f off the line (max %.1f), upright %.2f (needs > %.2f)",
-                            id, top - mouth, ahead, side, sideMax, st.cellFed ? std::fabs(tilt) : -tilt, st.cellFed ? 0.5f : (g_settings.core2 ? 0.7f : 0.5f));
+                            id, top - mouth, catchAhead, side, sideMax, st.cellFed ? std::fabs(tilt) : -tilt, st.cellFed ? 0.5f : (g_settings.core2 ? 0.7f : 0.5f));
                     }
                 }
             }

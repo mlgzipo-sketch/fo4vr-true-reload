@@ -23,7 +23,7 @@ namespace mrf
         bool  blockTwoHand{ true };     // no second-hand hold on the gun while its magazine is out
         float gunRadius{ 28.0f };       // ..within this distance of the gun
         bool  regripAfterSeat{ true };
-        bool  spareFromBelt{ true };    // grip at the belt while the gun has its magazine: a spare one as a real object  // give the grip back as soon as the magazine is seated
+        bool  spareFromBelt{ true };    // grip at the belt while the gun has its magazine: a spare one as a real object
         float holdSeconds{ 0.25f };     // reload button held this long: the magazine sticks out and waits
         float beltLow{ 55.0f };
         float beltHigh{ 80.0f };
@@ -63,18 +63,21 @@ namespace mrf
         bool  rockPlacesHeld{ true };   // a magazine ROCK holds in the hand is drawn where ROCK has it (one attachment, not two)
         bool  realInHand{ false };      // a magazine out of the well is a real object ROCK holds (always so with bCore2)
         bool  core2{ true };            // 0.12 core: parts move along their way by the palm on them (no grab point), a magazine out of the gun is ROCK's
-        float contactMargin{ 2.5f };
-        float catchSide{ 2.0f };
+        float contactMargin{ 2.5f };     // the palm this close to a part's box touches it (gun units)
+        float catchSide{ 2.0f };        // core2: a magazine is caught by the well only this close to its line (from below, not from the side)
         float catchAhead{ 9.5f };       // core2: ..and from this far below the mouth (the gun's collision keeps a real magazine out of the well)
-        float pushFactor{ 0.45f };      // core2: an open palm moves the slide only this part of the hand's motion (it slips; the grip takes it fully)        // core2: a magazine is caught by the well only this close to its line (from below, not from the side)
+        float pushFactor{ 0.45f };      // core2: an open palm moves the slide only this part of the hand's motion (it slips; the grip takes it fully)
         bool  stopEmptyReload{ true };  // the game's own reload of an empty gun is cut short (its state is set back to idle)
         int   markButton{ 32 };         // the free hand's stick click: writes a numbered mark and the whole state to the log
         bool  blockAnimReload{ true };  // the game's reload event of a gun reloaded by hand is refused (no vanilla animation)
-        bool  traceAnim{ false };
-        int   lateGripMs{ 400 };
-        bool  injectedInput{ false };
-        float railBreakAway{ 4.0f };    // a magazine at the mouth comes free when the hand is this far off its way out   // buttons read as the game sees them (devbench test input), not from the controller itself      // a grip closed this long before the palm reached the magazine / the belt still takes it       // every animation event of the player to the log
-        bool  traceState{ true };       // every change of what the plugin thinks (where the magazine is, the slide, who holds what)    // the palm this close to a part's box touches it (gun units)
+        bool  traceAnim{ false };       // every animation event of the player to the log
+        int   lateGripMs{ 400 };        // a grip closed this long before the palm reached the magazine / the belt still takes it
+        bool  injectedInput{ false };   // buttons read as the game sees them (devbench test input), not from the controller itself
+        float railBreakAway{ 4.0f };    // a magazine at the mouth comes free when the hand is this far off its way out
+        bool  ghostGun{ true };         // a real magazine at the well: the gun's collision is off, so it goes into the mouth itself
+        float ghostReach{ 12.0f };      // ..when it is this close to the catch (gun units)
+        float ghostCatchAhead{ 1.5f };  // ..and then it is caught only this far below the mouth (the zone's own "ahead" otherwise)
+        bool  traceState{ true };       // every change of what the plugin thinks (where the magazine is, the slide, who holds what)
         bool  recordedBolt{ true };     // the bolt / slide moves along the recorded way (a bolt action lifts, then goes back)
         bool  autoRecord{ true };       // a gun whose reload is not recorded yet is left to the game for one reload, which is recorded
         bool  recordAnim{ false };      // the plugin keeps its hands off and writes down how the game's own reload moves every part
@@ -101,6 +104,9 @@ namespace mrf
         bool  realRounds{ true };       // rounds from the belt (shells, a revolver's clip, a missile, a cell) are real objects ROCK holds
         bool  casings{ true };          // racking, a break action or a revolver emptied: cases (and unfired rounds) fly out as objects
         float casingImpulse{ 0.4f };    // how hard they are thrown (Havok impulse)
+        float casingSpeed{ 180.0f };    // ROCK throws them out of the port this fast (game units a second; 0 = only the impulse)
+        float casingSpin{ 18.0f };      // ..tumbling this fast (radians a second)
+        int   casingThrowMs{ 60 };      // ..driven this long, then they fly on their own
         float casingSeconds{ 40.0f };   // they lie this long, then are removed
         int   casingMax{ 24 };
         std::string roundModel;         // the model of the drawn round (empty: the gun's ammo casing)
@@ -109,4 +115,6 @@ namespace mrf
 
     // reads the ini into g_settings (missing keys keep their defaults)
     void loadSettings() noexcept;
+    // the ini is read again when it changed on disk (checked every two seconds); true when it was
+    bool reloadSettingsIfChanged() noexcept;
 }

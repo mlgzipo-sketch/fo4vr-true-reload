@@ -34,7 +34,12 @@ namespace mrf
     {
         std::uint32_t     ref{ 0 };
         Clock::time_point born{};
+        RE::NiPoint3      way{};          // thrown along this (world, unit): ROCK drives it out for a moment
+        float             spin{ 0.0f };   // ..turning this fast (rad/s) about its own long axis
     };
+
+    // ROCK throws the cases just made out of the port (velocity, not a push the physics may ignore)
+    void throwCasings(Clock::time_point now) noexcept;
 
     extern std::deque<Casing> g_casings;
 
