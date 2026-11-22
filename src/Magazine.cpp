@@ -433,27 +433,31 @@ namespace mrf
     {
         auto& st = g_state;
         st.ghostCount = 0;
-        const auto mouthAt = railPose(root, st.length).translate;
+        // the mouth in the gun root's frame, where ROCK's boxes are
+        const auto mouth = relative(root->world, pointTransform(topOf(railPose(root, st.length)))).translate;
+        const float p[3]{ mouth.x, mouth.y, mouth.z };
         std::string names;
         for (const auto& source : rocklink::bodiedSources()) {
             if (st.ghostCount >= 15) {
                 break;
             }
-            auto* node = findNamed(root, source.name.c_str());
-            if (!looksLikeObject(node)) {
-                continue;
+            if (source.kind == 7) {
+                continue;   // the gun's own magazine: off anyway while none is in
             }
-            const float r = node->worldBound.fRadius;
-            if (r > 0.0f && distance(node->worldBound.center, mouthAt) <= r + 1.0f) {
+            bool inside = true;
+            for (int k = 0; k < 3; ++k) {
+                inside = inside && p[k] > source.lo[k] - 1.0f && p[k] < source.hi[k] + 1.0f;
+            }
+            if (inside) {
                 st.ghostKeys[st.ghostCount++] = source.key;
                 names += names.empty() ? "" : ", ";
                 names += source.name;
             }
         }
-        static std::string told;
+        static std::string told = "-";
         if (names != told) {
             told = names;
-            note("WELL: a magazine lined up under it goes through %d collider(s) of the gun at the mouth: %s", st.ghostCount,
+            note("WELL: mouth at (%.1f %.1f %.1f) in the gun; a magazine lined up under it goes through %d collider(s): %s", p[0], p[1], p[2], st.ghostCount,
                 names.empty() ? "none (the gun stays solid)" : names.c_str());
         }
     }

@@ -49,8 +49,11 @@ namespace rocklink
     {
         std::uint64_t key{ 0 };
         std::string   name;
+        std::uint32_t kind{ 0 };          // ROCK's part kind (7 magazine, 8 magwell, 9 bolt, ...)
+        float         lo[3]{};            // its box in the gun root's frame
+        float         hi[3]{};
     };
-    // the weapon's nodes that have a collider of their own (as ROCK listed them for the drawn gun)
+    // the weapon's colliders with their boxes (as ROCK classified the drawn gun)
     const std::vector<BodiedSource>& bodiedSources() noexcept;
 
     struct Result

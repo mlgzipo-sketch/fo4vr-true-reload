@@ -154,9 +154,6 @@ namespace rocklink
             g_bodied.clear();
             for (std::uint32_t i = 0; i < count && i < total; ++i) {
                 const auto& source = sources[i];
-                if (source.bodyId != parts::kNoBody) {
-                    g_bodied.push_back(BodiedSource{ source.sourceKey, std::string(source.name, strnlen(source.name, sizeof(source.name))) });
-                }
                 if (f.magazine.node && std::strncmp(source.name, f.magazine.node, sizeof(source.name)) == 0) {
                     if (magazines++ == 0) g_magazineKey = source.sourceKey;
                 }
@@ -164,7 +161,6 @@ namespace rocklink
                     if (bolts++ == 0) g_boltKey = source.sourceKey;
                 }
             }
-            say("ROCK: %zu nodes of the weapon have a collider of their own", g_bodied.size());
             say("ROCK: %u nodes in the weapon; '%s' x%d (key %016llX), '%s' x%d (key %016llX)", count, f.magazine.node ? f.magazine.node : "-",
                 magazines, g_magazineKey, f.bolt.node ? f.bolt.node : "-", bolts, g_boltKey);
         }
@@ -236,6 +232,7 @@ namespace rocklink
             }
             say("ROCK parts of this weapon (%u colliders): kind (7 magazine, 8 magwell, 9 bolt, 10 slide, 11 charging handle), roles, node, box", count);
             float best[2]{ 0.0f, 0.0f };
+            g_bodied.clear();
             for (std::uint32_t i = 0; i < count && i < parts::kMaxEvidenceDetails; ++i) {
                 const auto& d = details[i];
                 const int which = d.partKind == 7 ? 0 : ((d.partKind >= 9 && d.partKind <= 11) ? 1 : -1);
@@ -250,6 +247,10 @@ namespace rocklink
                 }
                 char name[65]{};
                 std::memcpy(name, d.sourceName, 64);
+                if (d.localBoundsGame.valid && d.sourceKey != 0) {
+                    const auto& b = d.localBoundsGame;
+                    g_bodied.push_back(BodiedSource{ d.sourceKey, name, d.partKind, { b.min.x, b.min.y, b.min.z }, { b.max.x, b.max.y, b.max.z } });
+                }
                 say("  part %u: kind %u action %u reload %u support %u socket %u body %u node '%s' box (%.1f %.1f %.1f)..(%.1f %.1f %.1f)%s", i, d.partKind,
                     d.actionRole, d.reloadRole, d.supportRole, d.socketRole, d.bodyId, name, d.localBoundsGame.min.x, d.localBoundsGame.min.y,
                     d.localBoundsGame.min.z, d.localBoundsGame.max.x, d.localBoundsGame.max.y, d.localBoundsGame.max.z,
