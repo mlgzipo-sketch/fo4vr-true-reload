@@ -18,6 +18,7 @@
 #include "Angles.h"
 #include "Gun.h"
 #include "Nodes.h"
+#include "Objects.h"
 #include "Hands.h"
 #include "Paths.h"
 #include "ScriptBridge.h"
@@ -126,6 +127,18 @@ namespace mrf
             st.looseInNode = relative(magazine->world, attach->world);
         } else {
             st.looseInNode = identityTransform();
+        }
+        // a magazine of another mod worn on a carrier: the carrier's root (its collision) is put at the model's middle
+        if (st.kind == kGenericKind && !g_genericVisual.empty()) {
+            auto* attach = findNamed(magazine, "P-Mag");
+            auto* body = looksLikeObject(attach) ? attach : magazine;
+            if (body->worldBound.fRadius > 0.5f && body->worldBound.fRadius < 100.0f) {
+                const auto mid = relative(compose(magazine->world, st.looseInNode), pointTransform(body->worldBound.center)).translate;
+                st.looseInNode = compose(st.looseInNode, pointTransform(mid));
+                if (!st.railLogged) {
+                    note("Rail: the magazine is worn on a carrier, whose middle is (%.2f, %.2f, %.2f) of the model", mid.x, mid.y, mid.z);
+                }
+            }
         }
         // the Thompson's drums (kinds 6, 7) are worn 13 off their node: the real one is made where the drawn one is.
         // Measured on the drum's own geometry only (the node's whole bound takes in the rounds and the other children).

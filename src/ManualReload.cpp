@@ -86,6 +86,7 @@ namespace
         tidyCasings(Clock::now());
         throwCasings(Clock::now());
         tidyLooseRounds(Clock::now());
+        dressCarriers();
         readHand(0);
         readHand(1);
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone

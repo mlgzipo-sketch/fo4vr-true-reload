@@ -108,6 +108,11 @@ namespace mrf
     inline constexpr RE::TESFormID kGenericMagForm = 0x82E;   // MRF_MagGeneric (index 33 of MRF_Mags), its model set here
     // the model of MRF_MagGeneric: the magazine mod's model of a gun from another mod
     bool prepareGenericMagModel(const std::string& model) noexcept;
+    // the gun's magazine model has no collision (DOOM's AK drum, Thompson-like drums): the real magazine is a carrier
+    // with a vanilla collision, unseen, wearing that model. Empty when the model has its own collision.
+    extern std::string g_genericVisual;
+    // puts the magazine model on carriers that lack it (just made, or their 3D made again)
+    void dressCarriers() noexcept;
 
     void tidyCasings(Clock::time_point now) noexcept;
 

@@ -276,6 +276,79 @@ namespace mrf
         return true;
     }
 
+    std::string g_genericVisual;
+
+    namespace
+    {
+        // the carrier: a vanilla magazine with its own collision, about the size of a rifle's
+        constexpr const char* kCarrierModel = "Weapons\\MachineGun\\MGMagStraight.nif";
+        constexpr const char* kVisualName = "MRF_Visual";
+
+        RE::NiPointer<RE::NiNode> loadModel(const std::string& path) noexcept
+        {
+            RE::BSModelDB::DBTraits::ArgsType args{};
+            args.prepareAfterLoad = 1;
+            args.loadTextures = 1;
+            RE::NiPointer<RE::NiNode> node;
+            RE::BSModelDB::Demand(path.c_str(), &node, args);
+            return node;
+        }
+
+        bool hasCollision(RE::NiAVObject* root) noexcept
+        {
+            bool found = false;
+            forEachNode(root, [&](RE::NiAVObject* object, int) {
+                if (object->collisionObject) {
+                    found = true;
+                }
+                return !found;
+            });
+            return found;
+        }
+    }
+
+    void dressCarriers() noexcept
+    {
+        for (auto& [refId, loose] : g_loose) {
+            if (loose.visual.empty()) {
+                continue;
+            }
+            auto* ref = lookupRef(refId);
+            auto* root = ref ? ref->Get3D() : nullptr;
+            auto* node = looksLikeObject(root) ? root->IsNode() : nullptr;
+            if (!node) {
+                continue;
+            }
+            auto& kids = node->GetRuntimeData().children;
+            bool dressed = false;
+            for (auto& kid : kids) {
+                if (kid && kid->name == kVisualName) {
+                    dressed = true;
+                }
+            }
+            if (dressed) {
+                continue;
+            }
+            auto visual = loadModel(loose.visual);
+            if (!visual) {
+                note("Magazine: '%s' could not be loaded for carrier %08X", loose.visual.c_str(), refId);
+                loose.visual.clear();
+                continue;
+            }
+            for (auto& kid : kids) {   // the carrier's own look: hidden, its collision stays
+                if (kid && looksLikeObject(kid.get())) {
+                    setCulled(kid.get(), true);
+                }
+            }
+            visual->name = kVisualName;
+            visual->local.MakeIdentity();
+            visual->local.translate = loose.visualAt * -1.0f;
+            node->AttachChild(visual.get(), true);
+            note("Magazine: carrier %08X wears '%s' (its middle %.1f from the model's origin)", refId, loose.visual.c_str(),
+                std::sqrt(dot(loose.visualAt, loose.visualAt)));
+        }
+    }
+
     bool prepareGenericMagModel(const std::string& model) noexcept
     {
         auto* data = RE::TESDataHandler::GetSingleton();
@@ -287,8 +360,16 @@ namespace mrf
         }
         static std::string kept;   // SetModel keeps the pointer's text: hold it for good
         kept = model.rfind("Meshes\\", 0) == 0 || model.rfind("meshes\\", 0) == 0 ? model.substr(7) : model;
-        static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).SetModel(kept.c_str());
-        note("Magazine: a gun of another mod, its magazine is '%s'", kept.c_str());
+        g_genericVisual.clear();
+        if (g_settings.carrierMags) {
+            auto loaded = loadModel(kept);
+            if (loaded && !hasCollision(loaded.get())) {
+                g_genericVisual = kept;
+            }
+        }
+        static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).SetModel(g_genericVisual.empty() ? kept.c_str() : kCarrierModel);
+        note("Magazine: a gun of another mod, its magazine is '%s'%s", kept.c_str(),
+            g_genericVisual.empty() ? "" : " (no collision in it: a real one is a carrier wearing it)");
         return true;
     }
 
@@ -311,6 +392,10 @@ namespace mrf
         const auto loose = compose(node, g_state.looseInNode);
         const auto token = g_nextToken++;
         g_pending[token] = Pending{ rounds, g_state.kind, loose.rotate };
+        if (g_state.kind == kGenericKind && !g_genericVisual.empty()) {
+            g_pending[token].visual = g_genericVisual;
+            g_pending[token].visualAt = g_state.looseInNode.translate;   // the carrier's root is the model's middle
+        }
         PendingCommand command;
         command.type = kSpawn;
         command.kind = g_state.kind;
@@ -551,6 +636,8 @@ namespace mrf
             if (const auto it = g_pending.find(mag.token); it != g_pending.end()) {
                 loose.rounds = it->second.rounds;
                 loose.kind = it->second.kind;
+                loose.visual = it->second.visual;
+                loose.visualAt = it->second.visualAt;
                 auto* ref = lookupRef(mag.ref);
                 learnConvention(ref, ref ? ref->Get3D() : nullptr);
                 g_pending.erase(it);

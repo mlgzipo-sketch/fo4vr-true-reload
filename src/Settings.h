@@ -104,6 +104,7 @@ namespace mrf
         float roundRotY{ 0.0f };
         float roundRotZ{ 0.0f };
         float roundScale{ 1.0f };
+        bool  carrierMags{ true };      // a magazine model with no collision is worn by an unseen vanilla magazine
         bool  pinchHandle{ true };      // a rifle's charging handle / bolt knob is taken with thumb and index, not the fist
         float pinchThumb{ 0.45f };      // finger openness for it (0 curled, 1 open)
         float pinchIndex{ 0.4f };

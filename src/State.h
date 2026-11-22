@@ -47,6 +47,8 @@ namespace mrf
         std::uint32_t     rounds{ 0 };
         int               kind{ 0 };
         Clock::time_point born{};
+        std::string       visual;          // a magazine of another mod with no collision: its model, worn on a carrier
+        RE::NiPoint3      visualAt{};      // ..at this point of the carrier (the carrier's root is the model's middle)
     };
 
     struct Pending
@@ -54,6 +56,8 @@ namespace mrf
         std::uint32_t rounds{ 0 };
         int           kind{ 0 };
         RE::NiMatrix3 rotation{};
+        std::string   visual;
+        RE::NiPoint3  visualAt{};
     };
 
     // Guns that open instead of taking a magazine: a revolver's cylinder swings out, a break-action gun folds.

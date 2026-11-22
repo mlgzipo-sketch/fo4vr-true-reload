@@ -187,6 +187,7 @@ namespace mrf
             pose.pinky = { std::min(o + 0.1f, 1.0f), std::min(o + 0.1f, 1.0f), std::min(o + 0.1f, 1.0f), 0.0f };
             g_posed = frik->setHandPoseCustom(kFrikTag, frikHand(freeIndex()), pose, 120);
             g_posedPinch = g_posed;
+            note("HAND: the handle is pinched (thumb and index), FRIK %s", g_posed ? "took it" : "refused");
         } else if (on && frik->setHandPoseCustom) {
             g_posedPinch = false;
             const float c = std::clamp(g_settings.fingerCurl, 0.0f, 1.0f);
