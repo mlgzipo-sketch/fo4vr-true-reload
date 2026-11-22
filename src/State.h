@@ -210,6 +210,7 @@ namespace mrf
         bool               magBoxUsed{ false };            // the magazine's size was taken from ROCK's box
         bool               boltBoxUsed{ false };
         Clock::time_point  seatedAt{};
+        Clock::time_point  railHandSince{};               // the free hand took the magazine on the rail (or caught it there)
         bool               rockWasOnMagazine{ false };
         // core2: the parts as ROCK measured them at rest (gun root frame), the palm touching them
         bool               slideBoxKnown{ false };

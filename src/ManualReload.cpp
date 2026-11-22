@@ -608,7 +608,16 @@ namespace
                     st.exitAt = std::min(st.exitAt > 0.0f ? st.exitAt : 1e9f, std::max(st.length + 2.0f, st.s + 4.0f));
                 }
                 const float limit = g_settings.core2 ? st.exitAt : st.length + g_settings.captureAhead + 1.0f;
-                if (target > limit) {
+                // the hand pulled across the way out (the pipe guns throw the magazine out sideways, a hand pulls it down):
+                // past the mouth it comes free, and a hand far off is never left glued to a magazine stuck on the rail
+                // (it hung at 7.3 of 6.5 for two seconds and ROCK's hand flew off with it, 0.55)
+                const float offRail = distance(carried.translate, railPose(root, std::clamp(target, 0.0f, st.length + 4.0f)).translate);
+                const bool pulledAcross = now - st.railHandSince > std::chrono::milliseconds(300) &&
+                                          ((st.s >= st.length - 1.0f && offRail > g_settings.railBreakAway) || offRail > g_settings.railBreakAway * 3.0f);
+                if (pulledAcross) {
+                    note("OUT: pulled %.1f across the way out at %.1f of %.1f: the magazine comes free", offRail, st.s, st.length);
+                }
+                if (target > limit || pulledAcross) {
                     // clear of the well: from here it goes with the hand
                     if (g_settings.holdPoseOnExit && !g_rock.onMagazine) {
                         startBlend(st.lastDrawnValid ? st.lastDrawn : railPose(root, st.s), 0.20f);
@@ -694,6 +703,7 @@ namespace
                 } else if (upright && side <= sideMax && top <= mouth + ahead && top >= mouth - below) {
                     // the mouth of the well takes the top of the magazine: from here it moves only along the well
                     st.place = kRailHand;
+                    st.railHandSince = Clock::now();
                     const float seat = st.zoneMouthKnown ? seatAlong(root, target) : top;
                     st.s = std::clamp(seat, 0.0f, st.cellFed ? mouth + 0.5f : mouth + ahead);
                     st.exitAt = st.s + 4.0f;
@@ -978,7 +988,7 @@ namespace
             }
             // no magazine is drawn in the gun (none, or the real one is in the hand): its collider is switched off as well
             const bool magHidden = looksLikeObject(magazine) && (magazine->flags.flags & 1ull) != 0;
-            link.noMagazine = draw && (st.place == kGone || (st.place == kHand && magHidden));
+            link.noMagazine = (st.place == kGone || (st.place == kHand && magHidden));
             g_rock = rocklink::frame(link);
         }
 
