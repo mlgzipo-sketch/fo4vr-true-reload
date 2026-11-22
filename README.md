@@ -30,7 +30,7 @@ The plugin is still an **early alpha**. Bug reports with the log file (`Document
 
 ### Source layout
 
-`ManualReload.cpp` still holds the main per-frame logic and is being split into modules step by step, with no change in behaviour:
+`ManualReload.cpp` holds only the per-frame update and the plugin entry; the rest lives in modules:
 
 - `Log`, `Settings`, `SafeMemory`: logging, the ini, guarded memory reads
 - `NiMath`, `Angles`, `Paths`: vector/transform math, Papyrus angle conventions, arcs and paths
@@ -40,6 +40,8 @@ The plugin is still an **early alpha**. Bug reports with the log file (`Document
 - `Rail`, `Palm`, `Zones`: the magazine's way into the well, the palm on a part, the zone files
 - `Objects`: real magazines, rounds and fired cases
 - `ScriptBridge`: the command queue to the Papyrus script
+- `Magazine`, `Playback`, `Breech`, `Frame`: the magazine in the well and in the hand, slides and bolts, revolvers and break actions
+- `Recorder`, `StateLog`, `Editor`, `AnimHook`: recording the game's reload, the log and marks, the in-game zone editor, refusing the vanilla reload animation
 - `RockLink`, `GripHook`: the link to ROCK and the grip input hook
 
 ## Building
