@@ -217,6 +217,9 @@ namespace mrf
         bool               rackWantKnown{ false };                   // the reload button held and let go: the magazine stays sticking out
         Clock::time_point  wellNearAt{};                  // a real magazine in the hand was last near the well
         Clock::time_point  ghostSince{};                  // ..since then without a break (the colliders at the mouth are off)
+        std::uint32_t      stallRef{ 0 };                 // a magazine pushed at the mouth: which one, how far in it got, since when no further
+        float              stallBest{ 0.0f };
+        Clock::time_point  stallAt{};
         std::uint64_t      ghostKeys[16]{};               // ..those colliders (ROCK sources whose node holds the mouth)
         int                ghostCount{ 0 };
         float              offRail0{ -1.0f };              // how far the hand was off the way out at that moment               // the free hand took the magazine on the rail (or caught it there)

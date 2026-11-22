@@ -22,6 +22,7 @@
 #include "Paths.h"
 #include "ScriptBridge.h"
 #include "State.h"
+#include "RockLink.h"
 
 namespace mrf
 {
@@ -196,6 +197,20 @@ namespace mrf
             st.magBoxKnown = true;
             const RE::NiPoint3 middle{ (lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f };
             const float half[3]{ (hi[0] - lo[0]) * 0.5f, (hi[1] - lo[1]) * 0.5f, (hi[2] - lo[2]) * 0.5f };
+            if (st.kind == kGenericKind && !st.zoneWell && g_settings.magTilt < 0.0f && half[2] > 2.0f) {
+                // a gun of another mod built on another gun's nodes: its magazine node leans like that gun's (the DOOM nailgun's
+                // 26 deg, from the 10mm) while its own magazine stands straight. A magazine leaning t is at least
+                // height * tan t deep front to back: a box less deep than that is a straighter magazine, and the well follows it
+                const float nodeTilt = std::atan2(std::fabs(st.axis.y), std::fabs(st.axis.z));
+                const float boxTilt = std::atan2(half[1], half[2]);   // the most a magazine this deep can lean
+                if (nodeTilt > boxTilt + 0.05f) {
+                    const float tilt = std::atan2(std::max(0.0f, half[1] - half[0]), half[2]);   // its own depth taken as its width
+                    const float back = st.axis.y > 0.0f ? -1.0f : 1.0f;
+                    st.axis = tiltAxis(back * tilt * 57.29578f);
+                    note("Rail: the magazine's box is too narrow for the node's lean (%.1f deg, the box allows %.1f): the way out leans %.1f deg (%.2f, %.2f, %.2f)",
+                        nodeTilt * 57.29578f, boxTilt * 57.29578f, tilt * 57.29578f, st.axis.x, st.axis.y, st.axis.z);
+                }
+            }
             const float a[3]{ std::fabs(st.axis.x), std::fabs(st.axis.y), std::fabs(st.axis.z) };
             const int k = a[0] > a[1] && a[0] > a[2] ? 0 : (a[1] > a[2] ? 1 : 2);
             const float halfLength = half[k] / std::max(a[k], 0.3f);
@@ -223,7 +238,24 @@ namespace mrf
                 }
             }
         }
-        if (!st.boltBoxUsed && atRest && looksLikeObject(bolt) && rocklink::partBox(1, lo, hi)) {
+        // a gun of another mod: the slide is everything that hangs on the node the recording moves (the DOOM nailgun's
+        // handle at the back is under the same node as its bolt; ROCK called only the bolt a bolt)
+        bool moving = false;
+        if (!st.boltBoxUsed && atRest && looksLikeObject(bolt) && st.kind == kGenericKind) {
+            for (const auto& source : rocklink::bodiedSources()) {
+                if (source.name.empty() || !looksLikeObject(findNamed(bolt, source.name.c_str()))) {
+                    continue;
+                }
+                for (int i = 0; i < 3; ++i) {
+                    lo[i] = moving ? std::min(lo[i], source.lo[i]) : source.lo[i];
+                    hi[i] = moving ? std::max(hi[i], source.hi[i]) : source.hi[i];
+                }
+                moving = true;
+                note("  the slide takes in '%s' (%.1f %.1f %.1f)..(%.1f %.1f %.1f): it moves with '%s'", source.name.c_str(), source.lo[0], source.lo[1],
+                    source.lo[2], source.hi[0], source.hi[1], source.hi[2], nodeName(bolt).c_str());
+            }
+        }
+        if (!st.boltBoxUsed && atRest && looksLikeObject(bolt) && (moving || rocklink::partBox(1, lo, hi))) {
             st.boltBoxUsed = true;
             if (!st.zoneSlide) {
                 st.slideLo = { lo[0], lo[1], lo[2] };
@@ -234,7 +266,7 @@ namespace mrf
             const float high = std::clamp(g_settings.slideGrabHigh, 0.0f, 1.0f);
             st.slideCenter = { (lo[0] + hi[0]) * 0.5f, lo[1] + (hi[1] - lo[1]) * at, lo[2] + (hi[2] - lo[2]) * high };
             float handle[3]{};
-            if (rocklink::boltHandle(handle)) {
+            if (!moving && rocklink::boltHandle(handle)) {
                 st.slideCenter = { handle[0], handle[1], handle[2] };   // a charging handle: the hand goes to the handle itself
             }
             if (st.zoneSlide) {

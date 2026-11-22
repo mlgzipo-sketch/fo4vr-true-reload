@@ -120,8 +120,35 @@ namespace mrf
         }
         p.parsed = p.frames.size() >= 10;
         p.index = index;
-        if (const auto boltAt = index.find("WeaponBolt"); p.parsed && boltAt != index.end()) {
-            const int n = boltAt->second;
+        // the slide: WeaponBolt; when it stays put (guns of other mods built on another gun's nodes: the DOOM nailgun's
+        // charging handle is under WeaponExtra3), the WeaponExtra node that slides furthest without turning much
+        int boltNode = -1;
+        float boltAway = 0.0f;
+        for (const char* candidate : { "WeaponBolt", "WeaponExtra1", "WeaponExtra2", "WeaponExtra3" }) {
+            const auto at = index.find(candidate);
+            if (!p.parsed || at == index.end()) {
+                continue;
+            }
+            const int n = at->second;
+            float most = 0.0f, turn = 0.0f;
+            for (std::size_t f = 1; f < p.frames.size(); ++f) {
+                const auto d = p.frames[f][n].translate - p.frames[0][n].translate;
+                most = std::max(most, std::sqrt(dot(d, d)));
+                turn = std::max(turn, angleOf(mulAB(colsOf(p.frames[f][n]), transposed(colsOf(p.frames[0][n])))));
+            }
+            const bool bolt = std::strcmp(candidate, "WeaponBolt") == 0;
+            if (bolt && most + 3.0f * turn > 0.5f) {
+                boltNode = n;
+                break;
+            }
+            if (!bolt && most > 1.5f && turn < 0.35f && most > boltAway) {
+                boltNode = n;
+                boltAway = most;
+            }
+        }
+        p.boltName = boltNode >= 0 ? p.names[static_cast<std::size_t>(boltNode)] : std::string{ "WeaponBolt" };
+        if (boltNode >= 0) {
+            const int n = boltNode;
             const auto restCols = colsOf(p.frames[0][n]);
             std::vector<float> away(p.frames.size(), 0.0f);
             std::size_t peak = 0;
@@ -141,7 +168,7 @@ namespace mrf
                     p.boltTurn = std::max(p.boltTurn, angleOf(mulAB(colsOf(p.frames[f][n]), transposed(restCols))));
                 }
                 p.boltKnown = true;
-                note("PLAY: bolt / slide path of %08X: frames %zu..%zu (%.2f..%.2f s), turns %.1f deg on the way%s", weapon, from, peak, p.times[from],
+                note("PLAY: bolt / slide path of %08X (%s): frames %zu..%zu (%.2f..%.2f s), turns %.1f deg on the way%s", weapon, p.boltName.c_str(), from, peak, p.times[from],
                     p.times[peak], p.boltTurn * 57.29578f, p.boltTurn > 0.35f ? ": a bolt action, worked by hand after every shot" : "");
             }
         }
@@ -405,7 +432,14 @@ namespace mrf
             return false;
         }
         loadPlayed(gun.weapon->GetFormID());
-        return g_play.parsed && g_play.boltKnown && g_play.weapon == gun.weapon->GetFormID();
+        // a slide other than WeaponBolt only for guns of other mods (ours were made for WeaponBolt)
+        return g_play.parsed && g_play.boltKnown && g_play.weapon == gun.weapon->GetFormID() &&
+               (g_play.boltName == "WeaponBolt" || g_state.kind == kGenericKind);
+    }
+
+    const char* slideNodeName(const Gun& gun) noexcept
+    {
+        return g_state.kind == kGenericKind && boltPathFor(gun) ? g_play.boltName.c_str() : "WeaponBolt";
     }
 
     // The slide: grip it with the free hand, pull it back along the gun, let it go forward.

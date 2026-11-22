@@ -39,6 +39,7 @@ namespace mrf
         std::size_t                               boltFrom{ 0 };
         std::size_t                               boltTo{ 0 };
         float                                     boltTurn{ 0.0f };    // radians it turns on the way (a bolt action lifts its handle)
+        std::string                               boltName{ "WeaponBolt" };   // the node that slides
     };
 
     extern PlayedAnim g_play;
@@ -89,6 +90,8 @@ namespace mrf
     RE::NiPoint3 routeInverse(float u, const RE::NiPoint3& p) noexcept;
 
     bool boltPathFor(const Gun& gun) noexcept;
+    // the node the recorded slide path moves: WeaponBolt, or for a gun of another mod the WeaponExtra node that slides
+    const char* slideNodeName(const Gun& gun) noexcept;
 
     // The slide: grip it with the free hand, pull it back along the gun, let it go forward.
     // All the way back throws out the chambered round; going forward takes the next one from the magazine.

@@ -208,6 +208,23 @@ namespace mrf
         char path[160];
         std::snprintf(path, sizeof(path), "Data/F4SE/Plugins/ManualReloadF_zones/%08X.txt", weapon);
         std::ifstream in(path);
+        if (in && st.kind == kGenericKind) {
+            // a gun of another mod whose file this plugin wrote before 0.67 (the way out from the magazine node, the slide from ROCK's
+            // bolt alone): written again from what the gun's magazine and recording say
+            std::string first;
+            std::getline(in, first);
+            if (first.find("Edit, or move the cubes in Blender.") != std::string::npos && first.find("(auto 2)") == std::string::npos) {
+                in.close();
+                in.setstate(std::ios::failbit);   // as if there were none
+                note("ZONES: %s was written by an older version for a gun of another mod: made again", path);
+                if (!mayWrite) {
+                    return;
+                }
+            } else {
+                in.clear();
+                in.seekg(0);
+            }
+        }
         if (!in && !mayWrite) {
             note("ZONES: no %s (the gun's own distances are used)", path);
             return;
@@ -222,7 +239,7 @@ namespace mrf
             const float scale = st.magRest.scale > 0.0f ? st.magRest.scale : 1.0f;
             const auto mouth = st.magRest.translate + st.axis * (st.length - st.topAt * scale);   // the magazine's top as it leaves the well
             char text[256];
-            out << "; ManualReloadF zones of weapon " << std::hex << weapon << std::dec << ", gun root frame (game units). Edit, or move the cubes in Blender.\n";
+            out << "; ManualReloadF zones of weapon " << std::hex << weapon << std::dec << ", gun root frame (game units). Edit, or move the cubes in Blender. (auto 2)\n";
             std::snprintf(text, sizeof(text), "magazine lo %.3f %.3f %.3f hi %.3f %.3f %.3f\n", st.magLo.x, st.magLo.y, st.magLo.z, st.magHi.x, st.magHi.y, st.magHi.z);
             out << text;
             if (st.slideBoxKnown) {

@@ -319,6 +319,9 @@ namespace
         for (std::size_t i = 0; i < parts.size(); ++i) {
             parts[i] = findNamed(root, kMovingParts[i]);
         }
+        if (const char* slideName = slideNodeName(gun); std::strcmp(slideName, kMovingParts[1]) != 0) {
+            parts[1] = findNamed(root, slideName);   // a gun of another mod: its slide hangs on a WeaponExtra node (the recording says which)
+        }
         if (st.magNodeName != kMovingParts[0]) {
             parts[0] = findNamed(root, st.magNodeName.c_str());
             for (std::size_t i = 1; i < parts.size(); ++i) {
@@ -937,7 +940,7 @@ namespace
                         const float pullU = pull / std::max(g_settings.rackTravel, 0.1f);
                         const auto palmIn = inGun(root, free.palm);
                         const auto shift = hasRoute() ? palmIn - routeInverse(pullU, palmIn)
-                                         : g_settings.recordedBolt && g_play.parsed && g_play.boltKnown && g_play.weapon == gun.weapon->GetFormID()
+                                         : g_settings.recordedBolt && boltPathFor(gun)
                                                ? boltWay(pull / std::max(g_settings.rackTravel, 0.1f)).translate - boltWay(0.0f).translate
                                                : RE::NiPoint3{ 0.0f, -pull, 0.0f };
                         toSlide = inBox(st.slideLo, st.slideHi, inGun(root, free.palm) - shift, g_settings.contactMargin) ? 0.5f : 1e9f;
@@ -1006,7 +1009,7 @@ namespace
                 st.prevDriveKnown = false;
             }
             if (looksLikeObject(bolt)) {
-                link.bolt.node = kMovingParts[1];
+                link.bolt.node = slideNodeName(gun);
                 // a magazine sticking out comes first; one on its way in (in the hand, on the rail) too: the pipe guns' bolt handle is
                 // beside the well, and ROCK moved the hand from the magazine onto it as the magazine was caught (0.56)
                 link.bolt.grab = st.slidePointKnown && !justSeated && st.place != kRailAuto && st.place != kRailHand && st.place != kHand;   // a magazine sticking out comes first

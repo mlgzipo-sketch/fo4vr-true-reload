@@ -555,7 +555,20 @@ namespace mrf
                     }
                     const bool ghosted = g_settings.ghostGun && st.ghostCount > 0 && now - st.wellNearAt < std::chrono::milliseconds(250) &&
                                          now - st.ghostSince > std::chrono::milliseconds(150);
-                    const float catchAhead = ghosted ? std::min(ahead, g_settings.ghostCatchAhead) : ahead;
+                    // pushed into the mouth and stopped there (something of the gun still holds it: the DOOM 1911 stopped 2.5-3.7 short
+                    // of the mouth, logs of 0.66): a lined-up magazine that has not gone further in for a moment is caught where it is
+                    bool stalled = false;
+                    if (ghosted && upright && side <= sideMax && top <= mouth + ahead && top >= mouth - below) {
+                        if (st.stallRef != id || top < st.stallBest - 0.3f) {
+                            st.stallRef = id;
+                            st.stallBest = top;
+                            st.stallAt = now;
+                        }
+                        stalled = now - st.stallAt > std::chrono::milliseconds(300);
+                    } else if (st.stallRef == id) {
+                        st.stallRef = 0;
+                    }
+                    const float catchAhead = ghosted && !stalled ? std::min(ahead, g_settings.ghostCatchAhead) : ahead;
                     if (upright && side <= sideMax && top <= mouth + catchAhead && top >= mouth - below) {
                         st.rounds = loose.rounds;
                         st.place = kRailHand;
@@ -585,7 +598,7 @@ namespace mrf
                         griphook::setOwned(true);
                         buzz(freeIndex(), 900);
                         note("CATCH: the well has the real magazine %08X (%u rounds), %.1f out, %.1f off the line%s", id, st.rounds, st.s, side,
-                            ghosted ? " (gun collision off: caught at the mouth)" : "");
+                            stalled ? " (stopped at the mouth: caught where it stands)" : ghosted ? " (gun collision off: caught at the mouth)" : "");
                         continue;
                     }
                     static Clock::time_point missTold{};
