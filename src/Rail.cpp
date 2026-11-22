@@ -284,7 +284,15 @@ namespace mrf
             const float high = std::clamp(g_settings.slideGrabHigh, 0.0f, 1.0f);
             st.slideCenter = { (lo[0] + hi[0]) * 0.5f, lo[1] + (hi[1] - lo[1]) * at, lo[2] + (hi[2] - lo[2]) * high };
             float handle[3]{};
-            if (!moving && rocklink::boltHandle(handle)) {
+            // a charging handle: the hand goes to the handle itself (also on a gun of another mod, when the handle is on
+            // what moves: the SCAR's handle sticks out of its one bolt collider; the hand in the middle went into the gun)
+            const auto inBox = [&](const float p[3]) {
+                for (int i = 0; i < 3; ++i) {
+                    if (p[i] < lo[i] - 0.6f || p[i] > hi[i] + 0.6f) return false;
+                }
+                return true;
+            };
+            if (rocklink::boltHandle(handle) && (!moving || inBox(handle))) {
                 st.slideCenter = { handle[0], handle[1], handle[2] };   // a charging handle: the hand goes to the handle itself
             }
             if (st.zoneSlide) {
