@@ -1,7 +1,7 @@
 // ManualReloadF: vector and transform math in the game's row convention (world = local * parent)
 #pragma once
 
-#include <RE/Fallout.h>
+#include "MathTypes.h"
 
 namespace mrf
 {

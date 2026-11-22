@@ -1,7 +1,7 @@
 // ManualReloadF: geometry of ways drawn in Blender: a turn about a hinge, then a straight move; points along a way
 #pragma once
 
-#include <RE/Fallout.h>
+#include "MathTypes.h"
 #include <cstddef>
 #include <vector>
 

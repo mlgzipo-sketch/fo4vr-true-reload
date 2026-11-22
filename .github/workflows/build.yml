@@ -10,6 +10,21 @@ permissions:
   contents: write
 
 jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Unit tests (g++)
+        run: |
+          C=extern/CommonLibF4VR/CommonLibF4
+          g++ -std=c++23 -O1 -Wall -DMRF_UNIT_TESTS -include tests/Prelude.h -Isrc -I$C/include \
+            tests/MathTests.cpp tests/NiTypes.cpp src/NiMath.cpp src/Paths.cpp -o mrf_tests
+          ./mrf_tests
+
   windows:
     runs-on: windows-2022
     env:
@@ -49,6 +64,7 @@ jobs:
 
       - name: Unit tests
         shell: pwsh
+        timeout-minutes: 2
         run: |
           & build\Release\ManualReloadF_tests.exe
           if ($LASTEXITCODE -ne 0) { throw "unit tests failed" }
