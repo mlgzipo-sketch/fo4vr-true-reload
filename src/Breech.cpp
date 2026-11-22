@@ -873,9 +873,7 @@ namespace mrf
                 } else {
                     b.held = take;
                     dropHandRound("a new one from the belt");
-                    // a revolver drawn with its own clip (WeaponMagazineChild3): that clip is shown in the hand, not
-                    // the game's .45 speedloader, which fits no other gun
-                    g_beltRound.wanted = g_settings.realRounds && !(revolver && looksLikeObject(child[2]));
+                    g_beltRound.wanted = g_settings.realRounds;
                     playSound(4);
                     buzz(freeIndex(), 1200);
                     note("BELT: %u round(s) in the free hand", take);
@@ -1222,6 +1220,24 @@ namespace mrf
                 placeNode(child[4], pose);
             } else {
                 placeNode(child[filled == 0 ? 0 : 1], pose);
+            }
+        }
+
+        // a revolver with its own clip (WeaponMagazineChild3): the real speedloader ROCK holds is the physics only, unseen;
+        // the gun's own clip and its bullets are drawn where it is (the .45 speedloader fits no other gun)
+        if (revolver && roundObject && looksLikeObject(child[2])) {
+            setCulled(roundObject, true);
+            show(2, true);
+            show(4, true);
+            RE::NiTransform pose = roundObject->world;
+            pose.scale = scale;
+            placeNode(child[2], pose);
+            // the clip's own middle onto the speedloader's middle
+            const auto off = roundObject->worldBound.center - child[2]->worldBound.center;
+            pose.translate += off;
+            placeNode(child[2], pose);
+            if (looksLikeObject(child[4])) {
+                placeNode(child[4], pose);
             }
         }
 
