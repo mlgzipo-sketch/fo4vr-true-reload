@@ -56,7 +56,7 @@ namespace rocklink
         std::string g_lastDrive;
         bool g_suppressing{ false };   // the magazine's collider is switched off (setCollision)
         bool g_ghosting{ false };      // ..every collider of the gun
-        std::vector<std::uint64_t> g_topKeys;   // the weapon's nodes right under its root (each covers its subtree)
+        std::vector<BodiedSource> g_bodied;     // the weapon's nodes with a collider of their own
         std::uint32_t g_lastStatus[8]{ 999, 999, 999, 999, 999, 999, 999, 999 };
 
         void say(const char* format, ...) noexcept
@@ -151,11 +151,11 @@ namespace rocklink
             }
             int magazines = 0;
             int bolts = 0;
-            g_topKeys.clear();
+            g_bodied.clear();
             for (std::uint32_t i = 0; i < count && i < total; ++i) {
                 const auto& source = sources[i];
-                if (source.parentKey == 0 && g_topKeys.size() < parts::kMaxCollisionSources) {
-                    g_topKeys.push_back(source.sourceKey);
+                if (source.bodyId != parts::kNoBody) {
+                    g_bodied.push_back(BodiedSource{ source.sourceKey, std::string(source.name, strnlen(source.name, sizeof(source.name))) });
                 }
                 if (f.magazine.node && std::strncmp(source.name, f.magazine.node, sizeof(source.name)) == 0) {
                     if (magazines++ == 0) g_magazineKey = source.sourceKey;
@@ -164,7 +164,7 @@ namespace rocklink
                     if (bolts++ == 0) g_boltKey = source.sourceKey;
                 }
             }
-            say("ROCK: %zu nodes right under the weapon's root (the whole gun's collision goes off through them)", g_topKeys.size());
+            say("ROCK: %zu nodes of the weapon have a collider of their own", g_bodied.size());
             say("ROCK: %u nodes in the weapon; '%s' x%d (key %016llX), '%s' x%d (key %016llX)", count, f.magazine.node ? f.magazine.node : "-",
                 magazines, g_magazineKey, f.bolt.node ? f.bolt.node : "-", bolts, g_boltKey);
         }
@@ -274,7 +274,7 @@ namespace rocklink
             }
             g_suppressing = false;
             g_ghosting = false;
-            g_topKeys.clear();
+            g_bodied.clear();
             g_registered = false;
             g_driving = false;
             g_config.clear();
@@ -351,7 +351,7 @@ namespace rocklink
             if (!g_parts->setCollisionSuppression) {
                 return;
             }
-            const bool ghost = f.ghostGun && !g_topKeys.empty();
+            const bool ghost = f.ghostGun && f.ghostCount > 0;
             const bool mag = f.noMagazine && g_magazineKey != 0;
             if (!ghost && !mag) {
                 if (g_suppressing || g_ghosting) {
@@ -368,15 +368,16 @@ namespace rocklink
             request.leaseFrames = 2;
             request.weaponGenerationKey = g_key;
             if (ghost) {
-                for (const auto key : g_topKeys) {
-                    request.sourceKeys[request.sourceCount++] = key;
+                for (int i = 0; i < f.ghostCount && i < 16 && request.sourceCount < parts::kMaxCollisionSources; ++i) {
+                    request.sourceKeys[request.sourceCount++] = f.ghostKeys[i];
                 }
-            } else {
+            }
+            if (mag && request.sourceCount < parts::kMaxCollisionSources) {
                 request.sourceKeys[request.sourceCount++] = g_magazineKey;
             }
             g_suppressing = true;
             g_ghosting = ghost;
-            answer(ghost ? 7 : 6, ghost ? "a magazine at the well: the whole gun's collision is off (setCollisionSuppression)" :
+            answer(ghost ? 7 : 6, ghost ? "a magazine lined up under the well: the colliders at the mouth are off (setCollisionSuppression)" :
                                           "the missing magazine's collider is off (setCollisionSuppression)",
                 g_parts->setCollisionSuppression(g_client.owner(), kSlot, &request));
             g_lastStatus[5] = 999;
@@ -701,4 +702,6 @@ namespace rocklink
         }
         return status == api::Status::Ok;
     }
+
+    const std::vector<BodiedSource>& bodiedSources() noexcept { return g_bodied; }
 }

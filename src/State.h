@@ -212,7 +212,9 @@ namespace mrf
         Clock::time_point  seatedAt{};
         Clock::time_point  railHandSince{};
         Clock::time_point  wellNearAt{};                  // a real magazine in the hand was last near the well
-        Clock::time_point  ghostSince{};                  // ..since then without a break (the gun's collision is off)
+        Clock::time_point  ghostSince{};                  // ..since then without a break (the colliders at the mouth are off)
+        std::uint64_t      ghostKeys[16]{};               // ..those colliders (ROCK sources whose node holds the mouth)
+        int                ghostCount{ 0 };
         float              offRail0{ -1.0f };              // how far the hand was off the way out at that moment               // the free hand took the magazine on the rail (or caught it there)
         bool               rockWasOnMagazine{ false };
         // core2: the parts as ROCK measured them at rest (gun root frame), the palm touching them

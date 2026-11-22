@@ -4,6 +4,9 @@
 // No game headers here: this file is built with Windows.h.
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <cstdint>
 
 namespace rocklink
@@ -37,8 +40,18 @@ namespace rocklink
         Part magazine{};            // group 1
         Part bolt{};                // group 2
         bool noMagazine{ false };   // the magazine is not seated: the gun's own magazine collider is switched off
-        bool ghostGun{ false };     // a real magazine is at the well: every collider of the gun is off, so it can go in
+        bool ghostGun{ false };     // a real magazine is lined up under the well: the colliders around the mouth are off
+        int  ghostCount{ 0 };       // ..these (sources of the weapon, each with what hangs under it)
+        std::uint64_t ghostKeys[16]{};
     };
+
+    struct BodiedSource
+    {
+        std::uint64_t key{ 0 };
+        std::string   name;
+    };
+    // the weapon's nodes that have a collider of their own (as ROCK listed them for the drawn gun)
+    const std::vector<BodiedSource>& bodiedSources() noexcept;
 
     struct Result
     {

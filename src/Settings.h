@@ -75,7 +75,8 @@ namespace mrf
         bool  injectedInput{ false };   // buttons read as the game sees them (devbench test input), not from the controller itself
         float railBreakAway{ 4.0f };    // a magazine at the mouth comes free when the hand is this far off its way out
         bool  ghostGun{ true };         // a real magazine at the well: the gun's collision is off, so it goes into the mouth itself
-        float ghostReach{ 12.0f };      // ..when it is this close to the catch (gun units)
+        float ghostReach{ 6.0f };       // ..when it is lined up and this close to the catch (gun units)
+        float ghostSide{ 2.0f };        // ..and no further off the well's line than the catch allows plus this
         float ghostCatchAhead{ 1.5f };  // ..and then it is caught only this far below the mouth (the zone's own "ahead" otherwise)
         bool  traceState{ true };       // every change of what the plugin thinks (where the magazine is, the slide, who holds what)
         bool  recordedBolt{ true };     // the bolt / slide moves along the recorded way (a bolt action lifts, then goes back)

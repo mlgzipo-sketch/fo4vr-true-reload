@@ -428,6 +428,36 @@ namespace mrf
     // Real magazines: forgotten when they are gone, cleaned up when old, and taken over by this plugin
     // when the free hand brings one to a gun that has none.
 
+    // The colliders of the gun around the mouth of the well: ROCK's sources whose node's bound holds the mouth.
+    void pickWellColliders(RE::NiAVObject* root) noexcept
+    {
+        auto& st = g_state;
+        st.ghostCount = 0;
+        const auto mouthAt = railPose(root, st.length).translate;
+        std::string names;
+        for (const auto& source : rocklink::bodiedSources()) {
+            if (st.ghostCount >= 15) {
+                break;
+            }
+            auto* node = findNamed(root, source.name.c_str());
+            if (!looksLikeObject(node)) {
+                continue;
+            }
+            const float r = node->worldBound.fRadius;
+            if (r > 0.0f && distance(node->worldBound.center, mouthAt) <= r + 1.0f) {
+                st.ghostKeys[st.ghostCount++] = source.key;
+                names += names.empty() ? "" : ", ";
+                names += source.name;
+            }
+        }
+        static std::string told;
+        if (names != told) {
+            told = names;
+            note("WELL: a magazine lined up under it goes through %d collider(s) of the gun at the mouth: %s", st.ghostCount,
+                names.empty() ? "none (the gun stays solid)" : names.c_str());
+        }
+    }
+
     void looseMagazines(const Gun* gun, RE::NiAVObject* root) noexcept
     {
         const auto now = Clock::now();
@@ -495,9 +525,13 @@ namespace mrf
                     g_liveTopAt = now;
                     // at the well the gun's collision is switched off (ROCK), so the magazine itself goes into the mouth:
                     // then it is caught there, not pulled in from a hand's width away (0.58)
-                    if (g_settings.ghostGun && top < mouth + ahead + g_settings.ghostReach && side < sideMax + g_settings.ghostReach) {
+                    // only a magazine lined up under the well, close to its mouth, and only the colliders that hold the mouth:
+                    // the rest of the gun stays solid (0.59: in 0.58 the whole gun went through anything near it)
+                    if (g_settings.ghostGun && upright && top < mouth + ahead + g_settings.ghostReach && top > mouth - below - 2.0f &&
+                        side < sideMax + g_settings.ghostSide) {
                         if (now - st.wellNearAt > std::chrono::milliseconds(250)) {
                             st.ghostSince = now;
+                            pickWellColliders(root);
                         }
                         st.wellNearAt = now;
                     }
