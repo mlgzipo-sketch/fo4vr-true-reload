@@ -522,6 +522,11 @@ namespace mrf
             ed.clickDown = now;
             ed.clickLongDone = false;
         }
+        // both sticks held: FRIK's own menu (its weapon repositioning), not the zone editor
+        const auto& gunHand = g_hands[g_settings.gunHand];
+        if (click && gunHand.valid && (gunHand.buttons & buttonMask(g_settings.markButton)) != 0) {
+            ed.clickLongDone = true;
+        }
         if (click && !ed.clickLongDone && now - ed.clickDown > std::chrono::milliseconds(1000)) {
             ed.clickLongDone = true;
             if (ed.on) {
