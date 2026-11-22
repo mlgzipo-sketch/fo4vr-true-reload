@@ -54,6 +54,7 @@ namespace rocklink
         Box g_boxes[2];                  // 0 the magazine, 1 the slide / bolt (the biggest of its colliders)
         std::string g_lastGrip;
         std::string g_lastDrive;
+        bool g_suppressing{ false };   // the magazine's collider is switched off (setCollision)
         std::uint32_t g_lastStatus[8]{ 999, 999, 999, 999, 999, 999, 999, 999 };
 
         void say(const char* format, ...) noexcept
@@ -261,6 +262,10 @@ namespace rocklink
             if (g_driving && g_parts) {
                 g_parts->clearDriveTargets(g_client.owner(), kSlot);
             }
+            if (g_suppressing && g_parts) {
+                g_parts->clearCollisionSuppression(g_client.owner(), kSlot);
+            }
+            g_suppressing = false;
             g_registered = false;
             g_driving = false;
             g_config.clear();
@@ -327,6 +332,35 @@ namespace rocklink
             }
             say("ROCK: the free hand may take%s%s%s: targets %u, %u grab points %u", f.magazine.grab ? " the magazine" : "", f.bolt.grab ? " the slide" : "",
                 f.exclusive ? " and nothing else on the gun" : "", static_cast<unsigned>(status), pointCount, static_cast<unsigned>(pointStatus));
+        }
+
+        // the gun's magazine is hidden or out (not seated): its generated collider would still stop the hand and the real
+        // magazine where nothing is drawn. Renewed every frame (lease 2), cleared when it is back.
+
+        void setCollision(const Frame& f) noexcept
+        {
+            if (!g_parts->setCollisionSuppression) {
+                return;
+            }
+            if (!f.noMagazine || g_magazineKey == 0) {
+                if (g_suppressing) {
+                    g_suppressing = false;
+                    answer(5, "the magazine's collider is back (clearCollisionSuppression)", g_parts->clearCollisionSuppression(g_client.owner(), kSlot));
+                    g_lastStatus[6] = 999;
+                }
+                return;
+            }
+            parts::CollisionSuppression request{};
+            if (g_parts->getSample(g_client.owner(), &request.sample) != api::Status::Ok) {
+                return;
+            }
+            request.leaseFrames = 2;
+            request.sourceCount = 1;
+            request.weaponGenerationKey = g_key;
+            request.sourceKeys[0] = g_magazineKey;
+            g_suppressing = true;
+            answer(6, "the missing magazine's collider is off (setCollisionSuppression)", g_parts->setCollisionSuppression(g_client.owner(), kSlot, &request));
+            g_lastStatus[5] = 999;
         }
 
         void setDrives(const Frame& f) noexcept
@@ -481,6 +515,7 @@ namespace rocklink
 
         setTargets(f);
         setDrives(f);
+        setCollision(f);
         if (f.chamber != 0 && g_weapon->setChamberMarker) {
             answer(3, "chamber mark beside the ammo counter (setChamberMarker)",
                 g_weapon->setChamberMarker(g_client.owner(), kSlot,

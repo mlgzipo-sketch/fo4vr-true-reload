@@ -36,6 +36,7 @@ namespace rocklink
         int  chamber{ 0 };          // 0 unknown, 1 empty, 2 a round is chambered
         Part magazine{};            // group 1
         Part bolt{};                // group 2
+        bool noMagazine{ false };   // the magazine is not seated: the gun's own magazine collider is switched off
     };
 
     struct Result

@@ -19,6 +19,7 @@
 #include "api/FRIKApiV2.h"
 #include "api/openvr.h"
 
+#include "AnimHook.h"
 #include "Angles.h"
 #include "GripHook.h"
 #include "Frame.h"
@@ -98,12 +99,14 @@ namespace
         dt = std::clamp(dt, 0.001f, 0.05f);
 
         const auto gun = equippedGun(player);
+        animhook::install(player);
         if (gun.weapon != st.weapon) {
             releaseHand();
             griphook::setArmed(false);
             st = State{};
             st.lastFrame = now;
             st.weapon = gun.weapon;
+            animhook::takeRefused();   // a refusal for the last gun is not a reload of this one
             dropRound();
             g_round.modelReady = false;
             std::string magModel;
@@ -155,6 +158,9 @@ namespace
         }
 
         const bool unrecorded = g_settings.autoRecord && gun.weapon && gun.data && gun.data->ammo && !hasRecording(gun.weapon->GetFormID()) && !st.zoneHinge.arc && !st.hasZonesFile;
+        // the game's reload never starts for a gun reloaded by hand (its animation played on an empty gun); a gun still to be
+        // recorded is left to the game
+        animhook::setBlocking(st.managed && gun.weapon != nullptr && !(g_settings.recordAnim || unrecorded || g_rec.active));
         if (g_settings.recordAnim || unrecorded || g_rec.active) {
             static Clock::time_point toldAt{};
             if (now - toldAt > std::chrono::seconds(10)) {
@@ -267,7 +273,14 @@ namespace
         // the game's own reload (raw VR gunState)
         const auto gunState = static_cast<std::uint32_t>(player->gunState);
         const auto reloading = static_cast<std::uint32_t>(g_settings.reloadGunState);
-        const bool pressed = gunState == reloading && st.lastGunState != reloading && st.lastGunState != 0xFFFFFFFF;
+        // the game asked for its reload: its state shows it, or its reload event was refused (then the state may never show it)
+        static Clock::time_point refusedAt{};
+        const bool refused = animhook::takeRefused();
+        if (refused) {
+            refusedAt = now;
+        }
+        const bool stateEdge = gunState == reloading && st.lastGunState != reloading && st.lastGunState != 0xFFFFFFFF;
+        const bool pressed = refused || (stateEdge && now - refusedAt > std::chrono::milliseconds(800));
         if (gunState != st.lastGunState) {
             detail("gunState %u -> %u", st.lastGunState, gunState);
         }
@@ -455,13 +468,28 @@ namespace
             detail("Free hand grip: %s, reason %d, place %d, hidden reads %u", griphook::owned() ? "ours" : "everyone's", st.armReason,
                 st.place, griphook::hiddenCount());
         }
+        // a grip closed a moment before the palm got there is not lost (the first try used to do nothing: closed beside
+        // the magazine, the press was held back as a hold on the gun, and only a second press took it)
+        static Clock::time_point pressedAt{};
+        if (press) {
+            pressedAt = now;
+        }
+        const bool lateGrip = free.valid && free.grip && !press && now - pressedAt < std::chrono::milliseconds(g_settings.lateGripMs);
+        // the same at the belt: the hand closed just above it, then went in
+        const bool lateBelt = lateGrip && st.armReason == kArmNone && st.place == kGone && inBelt(player, free.palm) && !g_rock.onGun && !g_rock.onBolt &&
+                              rocklink::heldBy(freeIndex()) == 0;
+        if (lateBelt) {
+            note("BELT (late): the grip closed %.2f s before the palm reached the belt", std::chrono::duration<float>(now - pressedAt).count());
+            st.armReason = kArmBelt;
+            pressedAt = Clock::time_point{};
+        }
         const bool rockArm = rockOn() && (st.armReason == kArmRail || st.armReason == kArmSlide);   // ROCK sees this press too
         const bool rockTook = g_rock.onMagazine && !st.rockWasOnMagazine && free.valid && free.grip && st.place == kRailAuto;
         st.rockWasOnMagazine = g_rock.onMagazine;
         if (rockTook && !(press && st.armReason == kArmRail)) {
             logNote("ROCK closed the free hand on the magazine");
             takeFromRail(root, free);
-        } else if (press && (griphook::owned() || rockArm)) {
+        } else if ((press && (griphook::owned() || rockArm)) || lateBelt) {
             if (st.armReason == kArmRail && st.place == kRailAuto) {
                 takeFromRail(root, free);
             } else if (st.armReason == kArmBelt && st.place == kGone) {
@@ -513,6 +541,14 @@ namespace
             } else if (rounds > 0) {
                 spawnLoose(beltPose(root, free, magScale), rounds, "a spare from the belt");
             }
+        }
+
+        if (lateGrip && (st.armReason == kArmBlock || st.armReason == kArmNone) && st.place == kRailAuto && st.railKnown &&
+            palmOnMagazine(root, free.palm) && !g_rock.onBolt && !g_rock.onGun) {
+            note("TAKE (late): the grip closed %.2f s before the palm reached the magazine",
+                std::chrono::duration<float>(now - pressedAt).count());
+            st.armReason = kArmRail;
+            takeFromRail(root, free);
         }
 
         // the magazine's way
@@ -940,6 +976,9 @@ namespace
             if (link.magazine.drive || link.bolt.drive) {
                 st.lastDrive = now;
             }
+            // no magazine is drawn in the gun (none, or the real one is in the hand): its collider is switched off as well
+            const bool magHidden = looksLikeObject(magazine) && (magazine->flags.flags & 1ull) != 0;
+            link.noMagazine = draw && (st.place == kGone || (st.place == kHand && magHidden));
             g_rock = rocklink::frame(link);
         }
 
