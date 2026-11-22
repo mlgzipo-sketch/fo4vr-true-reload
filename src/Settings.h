@@ -74,7 +74,7 @@ namespace mrf
         int   lateGripMs{ 400 };        // a grip closed this long before the palm reached the magazine / the belt still takes it
         bool  injectedInput{ false };   // buttons read as the game sees them (devbench test input), not from the controller itself
         float railBreakAway{ 4.0f };
-        float partInertia{ 0.0f };      // a slide / bolt follows the hand on a spring this stiff (rad/s; 0 = rigid, lower = heavier)    // a magazine at the mouth comes free when the hand is this far off its way out
+        float partInertia{ 0.0f };      // a slide / bolt follows the hand on a spring this stiff (rad/s; 0 = rigid, lower = heavier)
         bool  ghostGun{ true };         // a real magazine at the well: the gun's collision is off, so it goes into the mouth itself
         float ghostReach{ 6.0f };       // ..when it is lined up and this close to the catch (gun units)
         float ghostSide{ 2.0f };        // ..and no further off the well's line than the catch allows plus this
