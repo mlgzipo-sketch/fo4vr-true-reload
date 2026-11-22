@@ -41,6 +41,9 @@ namespace mrf
     // ROCK throws the cases just made out of the port (velocity, not a push the physics may ignore)
     void throwCasings(Clock::time_point now) noexcept;
 
+    // the point of an object's bound nearest the palm (inside it): ROCK holds it there, not by its middle
+    RE::NiPoint3 palmGripPoint(const RE::NiAVObject* object, const RE::NiPoint3& palm) noexcept;
+
     extern std::deque<Casing> g_casings;
 
     extern RE::TESAmmo* g_casingModelFor;

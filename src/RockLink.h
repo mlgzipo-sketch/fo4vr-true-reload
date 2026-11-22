@@ -68,5 +68,5 @@ namespace rocklink
     bool releaseHeld(int hand, std::uint32_t refFormId) noexcept;
     // ROCK glides a loose object no hand holds toward `rotate`/`translate` (world, game units) with time constant
     // `approach` seconds: its velocities are set this step, so a far target throws it. Call each frame; stop to let it fly.
-    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach) noexcept;
+    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach, const char* what) noexcept;
 }

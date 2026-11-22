@@ -87,6 +87,14 @@ namespace mrf
             st.handRef = 0;
             return;
         }
+        // until ROCK has it, it stays where it came in the hand (it would drop for a moment and jump back up)
+        if (st.handRefInWandValid && free.valid && free.grip) {
+            auto* ref = lookupRef(st.handRef);
+            if (looksLikeObject(ref ? ref->Get3D() : nullptr)) {
+                const auto pose = toLinkPose(compose(free.wand, st.handRefInWand));
+                rocklink::driveLoose(st.handRef, pose.rotate, pose.translate, 0.05f, "a magazine waiting for the hand");
+            }
+        }
         int failure = 0;
         const int state = rocklink::forceGrabState(&failure);
         // the grip read as open for a frame or two while the hand is handed over is not a let go
@@ -119,7 +127,7 @@ namespace mrf
             }
             auto* ref = lookupRef(st.handRef);
             auto* mag3D = ref ? ref->Get3D() : nullptr;
-            const auto c = looksLikeObject(mag3D) ? mag3D->worldBound.center : free.palm;
+            const auto c = looksLikeObject(mag3D) ? palmGripPoint(mag3D, free.palm) : free.palm;
             const float middle[3]{ c.x, c.y, c.z };
             rocklink::forceGrab(freeIndex(), st.handRef, middle);
         }

@@ -270,6 +270,8 @@ namespace mrf
         Clock::time_point  grabTriedAt{};
         int                grabTries{ 0 };
         bool               grabDone{ false };
+        RE::NiTransform    handRefInWand{};               // where the real one came, in the hand's frame: kept there until ROCK holds it
+        bool               handRefInWandValid{ false };
         float              exitAt{ 0.0f };
         Clock::time_point  stopReloadUntil{};             // the game's reload of an empty gun is being cut short
         bool               zonesEarly{ false };            // ..read once before ROCK's boxes came

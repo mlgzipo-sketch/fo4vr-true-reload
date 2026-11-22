@@ -668,7 +668,7 @@ namespace rocklink
         return status == api::Status::Ok;
     }
 
-    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach) noexcept
+    bool driveLoose(std::uint32_t refFormId, const float rotate[9], const float translate[3], float approach, const char* what) noexcept
     {
         if (!g_grab || !g_grab->driveReleasedObject || !g_grab->queryReferenceInteraction || !refFormId) {
             return false;
@@ -696,7 +696,7 @@ namespace rocklink
             told[0] = static_cast<std::uint32_t>(status);
             told[1] = static_cast<std::uint32_t>(queried);
             told[2] = static_cast<std::uint32_t>(sampled);
-            say("ROCK: a thrown case is driven (driveReleasedObject): status %u (query %u, handle %08X, sample %u)", told[0], told[1],
+            say("ROCK: %s is driven (driveReleasedObject): status %u (query %u, handle %08X, sample %u)", what ? what : "an object", told[0], told[1],
                 found.referenceNativeHandle, told[2]);
         }
         return status == api::Status::Ok;

@@ -75,6 +75,18 @@ namespace mrf
         std::vector<Flying> g_flying;   // being thrown by ROCK right now
     }
 
+    RE::NiPoint3 palmGripPoint(const RE::NiAVObject* object, const RE::NiPoint3& palm) noexcept
+    {
+        const auto c = object->worldBound.center;
+        const float r = object->worldBound.radius;
+        const auto off = palm - c;
+        const float d = distance(palm, c);
+        if (r <= 0.0f || d <= 0.8f * r) {
+            return d <= 0.8f * r ? palm : c;
+        }
+        return c + off * (0.8f * r / d);
+    }
+
     void throwCasings(Clock::time_point now) noexcept
     {
         const auto drive = std::chrono::milliseconds(std::max(0, g_settings.casingThrowMs));
@@ -94,7 +106,7 @@ namespace mrf
             setRows(turn, RE::NiPoint3{ 1.0f, 0.0f, 0.0f }, RE::NiPoint3{ 0.0f, std::cos(a), std::sin(a) }, RE::NiPoint3{ 0.0f, -std::sin(a), std::cos(a) });
             target = compose(target, turn);
             const auto pose = toLinkPose(target);
-            if (!rocklink::driveLoose(it->ref, pose.rotate, pose.translate, tau)) {
+            if (!rocklink::driveLoose(it->ref, pose.rotate, pose.translate, tau, "a thrown case")) {
                 it = g_flying.erase(it);   // ROCK cannot: the Havok push from the script is all it gets
                 continue;
             }
@@ -547,20 +559,28 @@ namespace mrf
                         st.grabTriedAt = st.handRefAt;
                         st.grabTries = 1;
                         st.grabDone = false;
-                        const auto& palm = g_hands[freeIndex()].palm;
-                        const float point[3]{ palm.x, palm.y, palm.z };
+                        const auto& hand = g_hands[freeIndex()];
+                        const auto& palm = hand.palm;
+                        float point[3]{ palm.x, palm.y, palm.z };
                         auto* ref = lookupRef(mag.ref);
                         auto* mag3D = ref ? ref->Get3D() : nullptr;
                         if (const auto held = rocklink::heldBy(freeIndex()); held != 0 && held != mag.ref) {
                             rocklink::releaseHeld(freeIndex(), held);
                         }
+                        st.handRefInWandValid = false;
                         if (looksLikeObject(mag3D)) {
-                            const auto c = mag3D->worldBound.center;
-                            const float middle[3]{ c.x, c.y, c.z };
-                            rocklink::forceGrab(freeIndex(), mag.ref, middle);
-                        } else {
-                            rocklink::forceGrab(freeIndex(), mag.ref, point);
+                            // held where the palm already is (the nearest point of the magazine), so ROCK does not pull its
+                            // middle into the palm: no jump. Until ROCK has it, it is kept where it came in the hand.
+                            const auto grip = palmGripPoint(mag3D, palm);
+                            point[0] = grip.x;
+                            point[1] = grip.y;
+                            point[2] = grip.z;
+                            if (hand.valid) {
+                                st.handRefInWand = relative(hand.wand, mag3D->world);
+                                st.handRefInWandValid = true;
+                            }
                         }
+                        rocklink::forceGrab(freeIndex(), mag.ref, point);
                     }
                 } else {
                     deleteMagazine(mag.ref);   // it was already pushed into the well
