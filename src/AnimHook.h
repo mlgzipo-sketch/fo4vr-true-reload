@@ -18,4 +18,6 @@ namespace mrf::animhook
     unsigned blockedCount() noexcept;
     // a reload start was refused since the last call (the game asked to reload: the button, or the gun ran dry)
     bool takeRefused() noexcept;
+    // a reload start was let through since the last call (the game plays its reload: what a gun still to be recorded waits for)
+    bool takeStarted() noexcept;
 }

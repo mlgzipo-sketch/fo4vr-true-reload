@@ -22,6 +22,7 @@ namespace mrf::animhook
         std::atomic<bool>  g_blocking{ false };
         std::atomic<unsigned> g_blocked{ 0 };
         std::atomic<bool>  g_refused{ false };
+        std::atomic<bool>  g_started{ false };
         std::mutex         g_seenLock;
         std::unordered_map<std::string, unsigned> g_seen;
 
@@ -60,6 +61,9 @@ namespace mrf::animhook
                 }
                 return false;
             }
+            if (startsReload(name)) {
+                g_started = true;
+            }
             return g_original ? g_original(self, event) : false;
         }
     }
@@ -97,4 +101,6 @@ namespace mrf::animhook
     unsigned blockedCount() noexcept { return g_blocked; }
 
     bool takeRefused() noexcept { return g_refused.exchange(false); }
+
+    bool takeStarted() noexcept { return g_started.exchange(false); }
 }

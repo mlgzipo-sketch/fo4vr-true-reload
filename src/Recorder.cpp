@@ -1,4 +1,5 @@
 #include "Recorder.h"
+#include "AnimHook.h"
 
 #include <algorithm>
 #include <array>
@@ -243,14 +244,16 @@ namespace mrf
         if (reloading) {
             r.lastSeen = now;
         }
+        // VR does not always show the reload state (gunState 8) while the game's reload plays: its start event begins a take too
+        const bool started = animhook::takeStarted();
         if (!r.active) {
-            if (!reloading) {
+            if (!reloading && !started) {
                 return;
             }
             r = AnimRecorder{ .takes = r.takes };
             r.active = true;
             r.start = now;
-            r.lastSeen = now;
+            r.lastSeen = reloading ? now : now + std::chrono::milliseconds(1500);   // started by the event alone: about 4 s
             r.weapon = gun.weapon->GetFormID();
             forEachNode(root, [&](RE::NiAVObject* object, int depth) {
                 if (depth > 30 || r.nodes.size() >= 400) return false;
@@ -262,7 +265,7 @@ namespace mrf
                 }
                 return true;
             });
-            note("RECORD: the game's reload of %08X started, %zu nodes", r.weapon, r.nodes.size());
+            note("RECORD: the game's reload of %08X started (%s), %zu nodes", r.weapon, reloading ? "reload state" : "reload event", r.nodes.size());
         }
         const float t = std::chrono::duration<float>(now - r.start).count();
         std::vector<RE::NiTransform> frame(r.nodes.size());

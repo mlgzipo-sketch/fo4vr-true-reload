@@ -111,6 +111,7 @@ namespace
             st.lastFrame = now;
             st.weapon = gun.weapon;
             animhook::takeRefused();   // a refusal for the last gun is not a reload of this one
+            animhook::takeStarted();   // nor a reload the game played for it
             dropRound();
             g_round.modelReady = false;
             std::string magModel;
