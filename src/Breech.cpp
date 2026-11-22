@@ -648,6 +648,20 @@ namespace mrf
         const auto barrel = cellCover || capacitors ? axisOf(root->world, 1) : axisOf(mag->world, 1);   // the cylinder's / the barrels' own line, forward
         const auto breechNode = cellCover && looksLikeObject(cellNode) ? cellNode : looksLikeObject(child[0]) ? child[0] : mag;
         const auto breechAt = breechNode->world.translate - (revolver ? barrel * (2.0f * scale) : RE::NiPoint3{});
+        // cases out of the chambers drawn in the zones file (point chamberN, the gun closed): each out of its own tunnel,
+        // along the barrel; with none drawn, out of the breech side by side
+        const auto ejectFromChambers = [&](std::uint32_t count, const char* why) {
+            if (st.chambers.empty() || cellCover || capacitors) {
+                ejectCasings(gun, root, breechAt, barrel * -1.0f, count, why);
+                return;
+            }
+            std::vector<RE::NiPoint3> points;
+            for (std::uint32_t i = 0; i < count && i < st.chambers.size(); ++i) {
+                const auto inPart = relative(b.restInRoot, pointTransform(st.chambers[i])).translate;
+                points.push_back(compose(mag->world, pointTransform(inPart)).translate);
+            }
+            ejectCasingsFrom(gun, root, points, barrel * -1.0f, true, why);
+        };
         const bool fullyOpen = b.open && b.t >= (swinging || single ? 0.6f : 0.95f);   // hanging barrels need not be all the way down
         // zones (Blender): the palm against the opening part, taken back to where the part stands closed
         const auto partZone = [&]() -> const std::pair<RE::NiPoint3, RE::NiPoint3>* {
@@ -796,7 +810,7 @@ namespace mrf
                     b.ejectPushed = std::max(0.0f, b.ejectPushed + dot(rod - b.ejectPrev, run * (1.0f / length)));
                     if (b.ejectPushed > 0.6f * length && b.live + b.spent > 0) {
                         note("EJECTOR: pushed %.1f of %.1f: %u rounds back to the pouch, %u fired cases out", b.ejectPushed, length, b.live, b.spent);
-                        ejectCasings(gun, root, breechAt, barrel * -1.0f, b.live + b.spent, "pushed out by the ejector");
+                        ejectFromChambers(b.live + b.spent, "pushed out by the ejector");
                         if (b.live > 0) {
                             hud("Rounds ejected, returned to inventory");
                         }
@@ -818,7 +832,7 @@ namespace mrf
         // a break action throws its fired cases out by itself as it opens (extractor); live rounds stay in
         if (b.mech == 2 && fullyOpen && b.spent > 0 && now - b.opened > std::chrono::milliseconds(150)) {
             note("EXTRACTED: %u fired case(s) thrown out as the gun opened, %u live round(s) stay in", b.spent, b.live);
-            ejectCasings(gun, root, breechAt, barrel * -1.0f, b.spent, "thrown out by the extractor");
+            ejectFromChambers(b.spent, "thrown out by the extractor");
             b.spent = 0;
             buzz(g_settings.gunHand, 1000);
         }
@@ -832,7 +846,7 @@ namespace mrf
         if (!single && b.mech != 2 && fullyOpen && b.live + b.spent > 0 && muzzleUp && now - b.upSince > std::chrono::milliseconds(250) &&
             now - b.opened > std::chrono::milliseconds(350)) {
             note("EMPTIED: %u rounds back to the pouch, %u fired cases gone", b.live, b.spent);
-            ejectCasings(gun, root, breechAt, barrel * -1.0f, cellCover ? 1u : b.live + b.spent, "fell out, muzzle up");
+            ejectFromChambers(cellCover ? 1u : b.live + b.spent, "fell out, muzzle up");
             if (b.live > 0) {
                 hud("Rounds fell out, returned to inventory");
             }

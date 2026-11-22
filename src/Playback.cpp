@@ -652,10 +652,31 @@ namespace mrf
                 st.jamAt = 0.0f;
             }
             if (st.chamber || st.spentInChamber) {
-                // out of the ejection port, to the right and up
-                const auto port = looksLikeObject(bolt) ? bolt->world.translate : root->world.translate;
-                ejectCasings(gun, root, port, axisOf(root->world, 0) + axisOf(root->world, 2) * 0.6f, 1,
+                // out of the ejection port: on the side of the bolt the handle sticks out of (a left handle, a left port),
+                // at the bolt's outer face, not from inside the gun; a zones file "point port x y z" says exactly where
+                RE::NiPoint3 portInGun{};
+                float side = 1.0f;   // +x: the gun's right
+                const char* how = "the middle of the bolt";
+                if (const auto it = st.zonePoints.find("port"); it != st.zonePoints.end()) {
+                    portInGun = it->second;
+                    side = portInGun.x < 0.0f ? -1.0f : 1.0f;
+                    how = "the port drawn in the zones file";
+                } else if (st.slideBoxKnown) {
+                    float handle[3]{};
+                    const float middleX = (st.slideLo.x + st.slideHi.x) * 0.5f;
+                    if (rocklink::boltHandle(handle) && std::fabs(handle[0] - middleX) > 0.3f) {
+                        side = handle[0] < middleX ? -1.0f : 1.0f;
+                    }
+                    portInGun = { side > 0.0f ? st.slideHi.x : st.slideLo.x, (st.slideLo.y + st.slideHi.y) * 0.5f,
+                        st.slideLo.z + (st.slideHi.z - st.slideLo.z) * 0.7f };
+                    how = side > 0.0f ? "the right face of the bolt" : "the left face of the bolt (a left handle)";
+                } else if (looksLikeObject(bolt)) {
+                    portInGun = relative(root->world, bolt->world).translate;
+                }
+                const auto port = compose(root->world, pointTransform(portInGun)).translate + axisOf(root->world, 0) * (side * 0.5f * gunScale(root));
+                ejectCasings(gun, root, port, axisOf(root->world, 0) * side + axisOf(root->world, 2) * 0.6f, 1,
                     st.chamber ? "an unfired round, racked out" : "the fired case, racked out");
+                note("CASINGS: out of %s, to the %s", how, side > 0.0f ? "right" : "left");
                 st.spentInChamber = false;
             }
             if (st.chamber) {

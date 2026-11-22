@@ -34,7 +34,7 @@ namespace mrf
     {
         std::uint32_t     ref{ 0 };
         Clock::time_point born{};
-        RE::NiPoint3      way{};          // thrown along this (world, unit): ROCK drives it out for a moment
+        RE::NiPoint3      way{};          // thrown along this (world; its length scales fCasingSpeed): ROCK drives it out for a moment
         float             spin{ 0.0f };   // ..turning this fast (rad/s) about its own long axis
     };
 
@@ -54,6 +54,7 @@ namespace mrf
 
     // `count` cases (or unfired rounds) out of the gun at `at`, thrown along `way` (world), a little apart
     void ejectCasings(const Gun& gun, const RE::NiAVObject* root, const RE::NiPoint3& at, const RE::NiPoint3& way, std::uint32_t count, const char* why) noexcept;
+    void ejectCasingsFrom(const Gun& gun, const RE::NiAVObject* root, const std::vector<RE::NiPoint3>& at, const RE::NiPoint3& way, bool straight, const char* why) noexcept;
 
     // A round from the belt (a shell, a revolver's clip, a missile, a cell, a capacitor) as a real object that ROCK
     // holds in the free hand: the fingers close on it by themselves. Drawn in the hand until ROCK has it.

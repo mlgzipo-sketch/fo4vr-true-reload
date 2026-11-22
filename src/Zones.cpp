@@ -257,6 +257,7 @@ namespace mrf
         std::string line;
         int used = 0;
         st.chambers.clear();
+        st.zonePoints.clear();
         st.holdVariant = false;
         while (std::getline(in, line)) {
             std::vector<std::string> words;
@@ -363,6 +364,9 @@ namespace mrf
                 st.holdPointInGun = RE::NiPoint3{ num(2), num(3), num(4) };
                 st.holdPointKnown = true;
                 note("ZONES: a magazine from the belt is held at (%.1f %.1f %.1f) of it (seated, in the gun)", num(2), num(3), num(4));
+            } else if (words[0] == "point" && words.size() >= 5 && words[1] == "port") {
+                st.zonePoints["port"] = RE::NiPoint3{ num(2), num(3), num(4) };
+                note("ZONES: cases fly out of the port at (%.1f %.1f %.1f)", num(2), num(3), num(4));
             } else if (words[0] == "point" && words.size() >= 5 && words[1].rfind("chamber", 0) == 0) {
                 st.chambers.push_back(RE::NiPoint3{ num(2), num(3), num(4) });
                 ++used;

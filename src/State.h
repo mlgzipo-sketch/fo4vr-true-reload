@@ -238,6 +238,7 @@ namespace mrf
         RE::NiPoint3       slideLo{}, slideHi{};
         std::vector<RE::NiPoint3> route;                   // zones file: the slide / handle's way (a polyline, gun root frame), first point at rest
         std::vector<float> routeAt;                        // ..each point's share of the way's length (0..1)
+        std::unordered_map<std::string, RE::NiPoint3> zonePoints;   // zones file: "point NAME x y z" (port: where cases fly out)
         std::unordered_map<std::string, std::pair<RE::NiPoint3, RE::NiPoint3>> zoneBoxes;   // zones file: "box NAME lo .. hi .."
         std::vector<RE::NiPoint3> chambers;                // zones file: "point chamberN x y z" (the closed gun)
         std::unordered_map<std::string, std::vector<RE::NiPoint3>> zoneRoutes;   // zones file: "route NAME x y z .."

@@ -147,20 +147,36 @@ namespace mrf
         return true;
     }
 
-    // `count` cases (or unfired rounds) out of the gun at `at`, thrown along `way` (world), a little apart
+    // `count` cases (or unfired rounds) out of the gun at `at`, thrown along `way` (world), a little apart side by side
 
     void ejectCasings(const Gun& gun, const RE::NiAVObject* root, const RE::NiPoint3& at, const RE::NiPoint3& way, std::uint32_t count, const char* why) noexcept
     {
-        if (!g_settings.casings || count == 0 || !looksLikeObject(root) || !prepareCasingModel(gun)) {
+        if (!looksLikeObject(root)) {
             return;
         }
         count = std::min(count, 8u);
-        const auto dir = normalized(way);
+        std::vector<RE::NiPoint3> points;
         for (std::uint32_t i = 0; i < count; ++i) {
-            RE::NiTransform pose = root->world;
             const float spread = static_cast<float>(i) - 0.5f * static_cast<float>(count - 1);
             // well apart, or the physics throws two cases born inside each other far away
-            pose.translate = at + axisOf(root->world, 1) * (spread * 2.0f * gunScale(root)) + axisOf(root->world, 2) * (0.6f * static_cast<float>(i % 2) * gunScale(root));
+            points.push_back(at + axisOf(root->world, 0) * (spread * 2.0f * gunScale(root)) + axisOf(root->world, 2) * (0.6f * static_cast<float>(i % 2) * gunScale(root)));
+        }
+        ejectCasingsFrom(gun, root, points, way, false, why);
+    }
+
+    // one case out of each point: `straight` = out of a chamber's tunnel along its line (break actions, revolvers), not
+    // tossed up and back like out of an ejection port
+
+    void ejectCasingsFrom(const Gun& gun, const RE::NiAVObject* root, const std::vector<RE::NiPoint3>& at, const RE::NiPoint3& way, bool straight, const char* why) noexcept
+    {
+        if (!g_settings.casings || at.empty() || !looksLikeObject(root) || !prepareCasingModel(gun)) {
+            return;
+        }
+        const auto dir = normalized(way);
+        const std::size_t count = std::min<std::size_t>(at.size(), 8);
+        for (std::size_t i = 0; i < count; ++i) {
+            RE::NiTransform pose = root->world;
+            pose.translate = at[i];
             PendingCommand command;
             command.type = kCasing;
             command.kind = kCasingKind;
@@ -169,18 +185,26 @@ namespace mrf
                 g_nextCasingToken = kCasingTokenBase;
             }
             command.pose = poseForScript(pose);
-            const float wobble = 0.15f * spread;
+            const float spread = static_cast<float>(i) - 0.5f * static_cast<float>(count - 1);
+            const float wobble = straight ? 0.0f : 0.15f * spread;
             command.impulse = { dir.x + wobble, dir.y, dir.z, g_settings.casingImpulse };
             pushCommand(command);
-            // a case flies out a little up and back, each a little differently, tumbling
             const float jitter = 0.12f * static_cast<float>(std::abs(command.token * 7919) % 11 - 5) / 5.0f;
-            auto way2 = normalized(dir + axisOf(root->world, 2) * 0.35f + axisOf(root->world, 1) * (-0.15f + jitter));
-            g_casingWays.push_back(CasingThrow{ command.token, way2, g_settings.casingSpin * (i % 2 ? -1.0f : 1.0f) * (1.0f + jitter) });
+            RE::NiPoint3 way2{};
+            if (straight) {
+                // slides out of its tunnel along the barrel's line, a touch apart; slower than out of a port
+                const float speed = g_settings.casingSpeed > 0.0f ? g_settings.chamberCaseSpeed / g_settings.casingSpeed : 0.0f;
+                way2 = normalized(dir + axisOf(root->world, 0) * (0.1f * spread)) * speed;
+            } else {
+                // a case flies out of the port a little up and back, each a little differently, tumbling
+                way2 = normalized(dir + axisOf(root->world, 2) * 0.35f + axisOf(root->world, 1) * (-0.15f + jitter));
+            }
+            g_casingWays.push_back(CasingThrow{ command.token, way2, (straight ? 0.3f : 1.0f) * g_settings.casingSpin * (i % 2 ? -1.0f : 1.0f) * (1.0f + jitter) });
             while (g_casingWays.size() > 32) {
                 g_casingWays.pop_front();
             }
         }
-        note("CASINGS: %u out (%s)", count, why);
+        note("CASINGS: %u out (%s)%s", static_cast<unsigned>(count), why, straight ? ", each out of its own chamber" : "");
     }
 
     BeltRound g_beltRound;

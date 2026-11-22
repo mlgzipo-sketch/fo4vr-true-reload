@@ -116,6 +116,7 @@ namespace mrf
         bool  casings{ true };          // racking, a break action or a revolver emptied: cases (and unfired rounds) fly out as objects
         float casingImpulse{ 0.4f };    // how hard they are thrown (Havok impulse)
         float casingSpeed{ 180.0f };    // ROCK throws them out of the port this fast (game units a second; 0 = only the impulse)
+        float chamberCaseSpeed{ 90.0f };   // out of a break action's / revolver's chamber, along the barrel (game units a second)
         float casingSpin{ 18.0f };      // ..tumbling this fast (radians a second)
         int   casingThrowMs{ 60 };      // ..driven this long, then they fly on their own
         float casingSeconds{ 40.0f };   // they lie this long, then are removed
