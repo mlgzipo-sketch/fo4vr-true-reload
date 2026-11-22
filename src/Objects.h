@@ -105,6 +105,10 @@ namespace mrf
     // the model of MRF_MagHeldRound: a missile, a mini nuke, a cell: the ammo's own model; a shell: its case
     bool prepareHeldRoundModel(const Gun& gun, bool big) noexcept;
 
+    inline constexpr RE::TESFormID kGenericMagForm = 0x82E;   // MRF_MagGeneric (index 33 of MRF_Mags), its model set here
+    // the model of MRF_MagGeneric: the magazine mod's model of a gun from another mod
+    bool prepareGenericMagModel(const std::string& model) noexcept;
+
     void tidyCasings(Clock::time_point now) noexcept;
 
     // A real magazine where the gun's magazine node would stand at `node`.

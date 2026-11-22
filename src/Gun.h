@@ -43,6 +43,8 @@ namespace mrf
     inline constexpr int kGaussFirstKind = 24;    // MRF_MagGaussSmall .. MRF_MagGaussXL (24..26)
     inline constexpr int kFlamerFirstKind = 27;   // MRF_MagFlamer, MRF_MagFlamerLarge (27, 28)
     inline constexpr int kCryoKind = 29;          // MRF_MagCryo
+    // a gun none of the lists above know (another mod's, a DLC's): its magazine mod's model is set on MRF_MagGeneric
+    inline constexpr int kGenericKind = 33;       // MRF_MagGeneric
     inline constexpr std::array<const char*, 30> kMagModels{
         "weapons\\10mmpistol\\10mmmag01.nif", "weapons\\10mmpistol\\10mmmaglarge.nif",
         "weapons\\machinegun\\mgmagstraight.nif", "weapons\\machinegun\\mgmagdrum.nif",

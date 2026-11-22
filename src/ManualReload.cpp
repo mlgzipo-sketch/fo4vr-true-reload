@@ -135,6 +135,9 @@ namespace
                 kind = kMinigunKind;   // the minigun: its drum comes off and a new one goes on
                 magModel = "Ammo\\5mm\\5mmAmmo.nif";
             }
+            if (kind == kGenericKind && !prepareGenericMagModel(magModel)) {
+                kind = -1;   // an old plugin without MRF_MagGeneric: the gun is left to the game
+            }
             const bool pistol10 = gun.weapon && gun.data && gun.weapon->GetFormID() == k10mmPistol;
             st.managed = gun.weapon && gun.data && (pistol10 || (kind >= 0 && g_settings.allGuns));
             st.equippedAt = now;
@@ -149,7 +152,7 @@ namespace
                 st.gameBoltAction = flags == 0 || gun.instance->flags.any(RE::WEAPON_FLAGS::kBoltAction) || gun.weapon->GetFormID() == 0x0004F46A;
                 note("Weapon flags %08X: %s", static_cast<unsigned>(flags), st.gameBoltAction ? "a bolt action" : "not a bolt action (no working of the bolt after a shot)");
             }
-            st.cellFed = kind == kLaserCellKind || kind == kSyringerKind || kind == kFusionCoreKind || kind == kMinigunKind || kind >= kPlasmaKind;   // nothing to rack
+            st.cellFed = kind == kLaserCellKind || kind == kSyringerKind || kind == kFusionCoreKind || kind == kMinigunKind || (kind >= kPlasmaKind && kind <= kCryoKind);   // nothing to rack
             note("Equipped weapon %08X, capacity %u, rounds %u, magazine '%s' (kind %d): %s", gun.weapon ? gun.weapon->GetFormID() : 0u,
                 capacityOf(gun), total, magModel.c_str(), kind, st.managed ? "reloaded by hand" : "not handled (no magazine of group 1)");
             if (gun.weapon) {

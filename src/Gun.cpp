@@ -69,6 +69,23 @@ namespace mrf
         return total;
     }
 
+    // A model file named like a magazine (lower case, without "meshes\\"): "mag" (not "magnum"), "clip", "drum", "cell".
+
+    bool looksLikeMagazine(const std::string& name) noexcept
+    {
+        const auto slash = name.find_last_of("\\/");
+        std::string file = slash == std::string::npos ? name : name.substr(slash + 1);
+        for (std::size_t at = file.find("magnum"); at != std::string::npos; at = file.find("magnum")) {
+            file.erase(at, 6);
+        }
+        for (const char* word : { "mag", "clip", "drum", "cell" }) {
+            if (file.find(word) != std::string::npos) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // The magazine the equipped gun wears: its magazine mod's model, looked up in kMagModels (-1: none of ours).
 
     int magazineKindOf(RE::PlayerCharacter* player, const RE::TESForm* weapon, std::string& model) noexcept
@@ -77,6 +94,7 @@ namespace mrf
         if (!weapon || !list || !readable(list, sizeof(RE::BGSInventoryList))) {
             return -1;
         }
+        std::string generic;
         for (auto& item : list->data) {
             if (item.object != weapon) {
                 continue;
@@ -113,8 +131,16 @@ namespace mrf
                             return static_cast<int>(i);
                         }
                     }
+                    if (generic.empty() && looksLikeMagazine(name)) {
+                        generic = path;
+                    }
+                    note("Weapon mod %08X: '%s'", form->GetFormID(), path);
                 }
             }
+        }
+        if (!generic.empty()) {
+            model = generic;
+            return kGenericKind;   // a gun of another mod: its magazine mod's own model is the real magazine
         }
         return -1;
     }

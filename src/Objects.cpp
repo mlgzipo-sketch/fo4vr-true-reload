@@ -276,6 +276,22 @@ namespace mrf
         return true;
     }
 
+    bool prepareGenericMagModel(const std::string& model) noexcept
+    {
+        auto* data = RE::TESDataHandler::GetSingleton();
+        auto* form = data ? data->LookupForm(kGenericMagForm, "ManualReloadF.esp") : nullptr;
+        auto* misc = form ? form->As<RE::TESObjectMISC>() : nullptr;
+        if (!misc || model.empty()) {
+            note("Magazine: %s", !misc ? "MRF_MagGeneric is not in ManualReloadF.esp (old plugin?)" : "no model");
+            return false;
+        }
+        static std::string kept;   // SetModel keeps the pointer's text: hold it for good
+        kept = model.rfind("Meshes\\", 0) == 0 || model.rfind("meshes\\", 0) == 0 ? model.substr(7) : model;
+        static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).SetModel(kept.c_str());
+        note("Magazine: a gun of another mod, its magazine is '%s'", kept.c_str());
+        return true;
+    }
+
     void tidyCasings(Clock::time_point now) noexcept
     {
         while (!g_casings.empty() && (static_cast<int>(g_casings.size()) > std::max(1, g_settings.casingMax) ||
