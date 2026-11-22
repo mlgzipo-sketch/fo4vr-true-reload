@@ -70,6 +70,16 @@ namespace mrf
                 note("CORE2: ROCK holds magazine %08X in the palm (%.2f s, %d asks)", st.handRef,
                     std::chrono::duration<float>(now - st.handRefAt).count(), st.grabTries);
             }
+            // the saved hold of this gun (and this magazine) is how it lies in the hand, not ROCK's own offset
+            if (g_settings.keepHold && st.holdInWandKnown && free.valid) {
+                auto* ref = lookupRef(st.handRef);
+                auto* mag3D = ref ? ref->Get3D() : nullptr;
+                if (looksLikeObject(mag3D)) {
+                    auto root = compose(compose(free.wand, st.holdInWand), st.looseInNode);
+                    const auto pose = toLinkPose(root);
+                    rocklink::guideHeld(freeIndex(), st.handRef, pose.rotate, pose.translate, mag3D->world.scale);
+                }
+            }
             return;
         }
         if (st.grabDone) {

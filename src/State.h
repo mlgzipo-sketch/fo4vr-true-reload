@@ -306,6 +306,8 @@ namespace mrf
         RE::NiTransform    roundFrozen{};
         RE::NiTransform    holdInWand{};                   // zones file "hold": the magazine in the hand as it was shown (stick click with one held)
         bool               holdInWandKnown{ false };
+        bool               holdVariant{ false };           // ..read from the line of this very magazine (hold@<model>)
+        std::string        magModel;                       // the gun's magazine model now (its variant)
         bool               gameBoltAction{ true };
         int                jam{ 0 };                       // a malfunction: 1 the round did not feed, 2 the case stuck in the port
         float              jamAt{ 0.0f };                  // ..the slide stays this part of its way back until it is racked

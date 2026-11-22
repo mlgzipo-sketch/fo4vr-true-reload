@@ -80,6 +80,10 @@ namespace rocklink
     void cancelGrab() noexcept;
     // The reference the hand holds through ROCK now (0 none).
     std::uint32_t heldBy(int hand) noexcept;
+    // ROCK keeps the object the hand holds at this root pose (world, game units) through its grab constraint, this
+    // frame and the next: call every frame. The saved hold of the gun's magazine is kept this way, whatever offset ROCK
+    // itself keeps for the object's base form (all magazines of other mods share one).
+    bool guideHeld(int hand, std::uint32_t refFormId, const float rotate[9], const float translate[3], float scale) noexcept;
     // ROCK lets go of that reference.
     bool releaseHeld(int hand, std::uint32_t refFormId) noexcept;
     // ROCK glides a loose object no hand holds toward `rotate`/`translate` (world, game units) with time constant

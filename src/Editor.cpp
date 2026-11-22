@@ -105,7 +105,7 @@ namespace mrf
             if (line.rfind("slide route", 0) == 0) {
                 continue;   // read in the second pass below
             }
-            if (head == "hold" || head == "roundhold") {
+            if (head.rfind("hold", 0) == 0 || head == "roundhold") {
                 ed.keep.push_back(line);
                 continue;
             }
@@ -244,6 +244,21 @@ namespace mrf
         const auto backup = path.substr(0, path.size() - 4) + ".bak";
         if (!std::filesystem::exists(backup, ignored) && std::filesystem::exists(path, ignored)) {
             std::filesystem::copy_file(path, backup, ignored);
+        }
+        // the hold lines as the file has them now (a hold saved by the stick click while the editor was open is kept)
+        std::vector<std::string> holds;
+        {
+            std::ifstream in(path);
+            for (std::string line; std::getline(in, line);) {
+                std::istringstream words(line);
+                std::string head;
+                if ((words >> head) && (head.rfind("hold", 0) == 0 || head == "roundhold")) {
+                    holds.push_back(line);
+                }
+            }
+        }
+        if (!holds.empty()) {
+            g_ed.keep = holds;
         }
         std::ofstream out(path);
         if (!out) {

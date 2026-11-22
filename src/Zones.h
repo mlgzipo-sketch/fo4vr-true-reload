@@ -23,4 +23,8 @@ namespace mrf
     void loadZoneRoutes(std::uint32_t weapon) noexcept;
 
     void zonesFor(std::uint32_t weapon, bool mayWrite = true) noexcept;
+
+    // the key of a magazine's own hold line in the gun's zones file: "hold@" + its model's file name (lower case, no
+    // folder, no extension); empty without a model
+    std::string holdKeyOf(const std::string& model);
 }

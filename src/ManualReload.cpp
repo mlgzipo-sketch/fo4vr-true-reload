@@ -148,6 +148,7 @@ namespace
             st.chamber = total > 0;
             st.rounds = total > 0 ? total - 1 : 0;
             st.kind = kind >= 0 ? kind : (capacityOf(gun) > 12 ? 1 : 0);
+            st.magModel = magModel;
             st.gameBoltAction = true;
             if (gun.instance && readable(gun.instance, sizeof(RE::TESObjectWEAP::InstanceData))) {
                 const auto flags = gun.instance->flags.underlying();

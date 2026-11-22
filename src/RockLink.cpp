@@ -673,6 +673,35 @@ namespace rocklink
         return state.phase == api::grab::HandInteractionPhase::Holding ? state.targetFormId : 0;
     }
 
+    bool guideHeld(int hand, std::uint32_t refFormId, const float rotate[9], const float translate[3], float scale) noexcept
+    {
+        if (!g_grab || !g_grab->setHeldObjectTarget || !g_grab->getHandInteractionState || !refFormId) {
+            return false;
+        }
+        api::grab::HandInteractionState state{};
+        if (g_grab->getHandInteractionState(g_client.owner(), rockHand(hand), &state) != api::Status::Ok || state.targetFormId != refFormId) {
+            return false;
+        }
+        api::grab::HeldObjectTarget target{};
+        target.hand = rockHand(hand);
+        target.referenceFormId = refFormId;
+        target.leaseFrames = 2;
+        std::memcpy(target.rootWorld.rotate, rotate, sizeof(target.rootWorld.rotate));
+        std::memcpy(target.rootWorld.translate, translate, sizeof(target.rootWorld.translate));
+        target.rootWorld.scale = scale;
+        if (g_grab->getSample) {
+            g_grab->getSample(g_client.owner(), &target.sample);
+        }
+        target.gripSequence = state.gripSequence;
+        const auto status = g_grab->setHeldObjectTarget(g_client.owner(), &target);
+        static std::uint32_t told = 999;
+        if (static_cast<std::uint32_t>(status) != told) {
+            told = static_cast<std::uint32_t>(status);
+            say("ROCK: the held magazine is kept at the saved hold (setHeldObjectTarget): status %u", told);
+        }
+        return status == api::Status::Ok;
+    }
+
     bool releaseHeld(int hand, std::uint32_t refFormId) noexcept
     {
         if (!g_grab || !g_grab->requestForceRelease) {

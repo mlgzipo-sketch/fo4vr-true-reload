@@ -102,7 +102,16 @@ namespace mrf
         }
         st.holdInWand = hold;
         st.holdInWandKnown = true;
-        return writeHoldLine(gun.weapon->GetFormID(), "hold", st.holdInWand);
+        // this magazine's own line (hold@<model>), and the gun's line for its other magazines that have none yet
+        const auto variant = holdKeyOf(st.magModel);
+        bool ok = true;
+        if (!variant.empty()) {
+            ok = writeHoldLine(gun.weapon->GetFormID(), variant.c_str(), st.holdInWand);
+        }
+        if (!st.holdVariant || variant.empty()) {
+            ok = writeHoldLine(gun.weapon->GetFormID(), "hold", st.holdInWand) && ok;
+        }
+        return ok;
     }
 
     void writeState(const char* why, const Gun& gun, RE::NiAVObject* root, RE::NiAVObject* magazine, RE::NiAVObject* bolt) noexcept

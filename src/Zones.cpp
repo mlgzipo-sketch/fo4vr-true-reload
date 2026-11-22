@@ -257,6 +257,7 @@ namespace mrf
         std::string line;
         int used = 0;
         st.chambers.clear();
+        st.holdVariant = false;
         while (std::getline(in, line)) {
             std::vector<std::string> words;
             std::string word;
@@ -336,7 +337,15 @@ namespace mrf
                 st.catchPointKnown = true;
                 note("ZONES: the magazine is caught by its point (%.1f %.1f %.1f) in the gun, (%.2f %.2f %.2f) on the magazine", at.x, at.y, at.z,
                     st.catchPointInNode.x, st.catchPointInNode.y, st.catchPointInNode.z);
-            } else if (words[0] == "hold" && words.size() >= 13) {
+            } else if ((words[0] == "hold" || words[0].rfind("hold@", 0) == 0) && words.size() >= 13) {
+                const bool variant = words[0] != "hold";
+                if (variant && words[0] != holdKeyOf(st.magModel)) {
+                    continue;   // the hold of another magazine of this gun
+                }
+                if (!variant && st.holdVariant) {
+                    continue;   // this magazine has its own
+                }
+                st.holdVariant = variant;
                 auto& h = st.holdInWand;
                 h = identityTransform();
                 h.translate = RE::NiPoint3{ num(1), num(2), num(3) };
@@ -394,5 +403,20 @@ namespace mrf
         note("ZONES: %s read, %d zones (magazine (%.1f %.1f %.1f)..(%.1f %.1f %.1f), slide (%.1f %.1f %.1f)..(%.1f %.1f %.1f), well side %.1f ahead %.1f)", path, used,
             st.magLo.x, st.magLo.y, st.magLo.z, st.magHi.x, st.magHi.y, st.magHi.z, st.slideLo.x, st.slideLo.y, st.slideLo.z, st.slideHi.x, st.slideHi.y,
             st.slideHi.z, st.zoneCatchSide, st.zoneCatchAhead);
+    }
+
+    std::string holdKeyOf(const std::string& model)
+    {
+        auto name = model.substr(model.find_last_of("\\/") == std::string::npos ? 0 : model.find_last_of("\\/") + 1);
+        if (const auto dot = name.rfind('.'); dot != std::string::npos) {
+            name.resize(dot);
+        }
+        std::string key;
+        for (const char c : name) {
+            if (c != ' ' && c != '\t') {
+                key += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+        }
+        return key.empty() ? std::string{} : "hold@" + key;
     }
 }
