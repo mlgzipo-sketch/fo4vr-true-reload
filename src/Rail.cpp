@@ -206,9 +206,11 @@ namespace mrf
         float lo[3]{}, hi[3]{};
         if (!st.magBoxUsed && st.railKnown && rocklink::partBox(0, lo, hi)) {
             st.magBoxUsed = true;
-            st.magLo = { lo[0], lo[1], lo[2] };
-            st.magHi = { hi[0], hi[1], hi[2] };
-            st.magBoxKnown = true;
+            if (!st.zoneMag) {   // a grab box drawn in the zones file comes first
+                st.magLo = { lo[0], lo[1], lo[2] };
+                st.magHi = { hi[0], hi[1], hi[2] };
+                st.magBoxKnown = true;
+            }
             const RE::NiPoint3 middle{ (lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f };
             const float half[3]{ (hi[0] - lo[0]) * 0.5f, (hi[1] - lo[1]) * 0.5f, (hi[2] - lo[2]) * 0.5f };
             if (st.kind == kGenericKind && g_settings.magTilt < 0.0f && half[2] > 2.0f) {

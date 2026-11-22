@@ -258,6 +258,7 @@ namespace mrf
         int used = 0;
         st.chambers.clear();
         st.zonePoints.clear();
+        st.zoneMag = false;
         st.holdVariant = false;
         while (std::getline(in, line)) {
             std::vector<std::string> words;
@@ -278,7 +279,7 @@ namespace mrf
                 const RE::NiPoint3 lo{ std::min(num(2), num(6)), std::min(num(3), num(7)), std::min(num(4), num(8)) };
                 const RE::NiPoint3 hi{ std::max(num(2), num(6)), std::max(num(3), num(7)), std::max(num(4), num(8)) };
                 if (words[0] == "magazine") {
-                    st.magLo = lo, st.magHi = hi, st.magBoxKnown = true;
+                    st.magLo = lo, st.magHi = hi, st.magBoxKnown = true, st.zoneMag = true;
                 } else {
                     st.slideLo = lo, st.slideHi = hi, st.slideBoxKnown = true, st.zoneSlide = true;
                     if (st.slideCenterKnown) {

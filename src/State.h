@@ -233,6 +233,7 @@ namespace mrf
         bool               rockWasOnMagazine{ false };
         // core2: the parts as ROCK measured them at rest (gun root frame), the palm touching them
         bool               slideBoxKnown{ false };
+        bool               zoneMag{ false };     // the magazine's grab box came from the zones file: it alone is where the hand takes it
         bool               zoneSlide{ false };   // the slide box came from the zones file: ROCK's boxes do not replace it
         bool               zoneWell{ false };    // ..and the well's mouth and travel
         RE::NiPoint3       slideLo{}, slideHi{};

@@ -124,6 +124,9 @@ namespace mrf
         }
         // a zones file draws the grip of one magazine (the 10mm's short one): a longer one fitted to the gun (the 10mm's
         // large magazine, 7 longer) is taken anywhere on its own box as ROCK measured it (only the part outside the gun)
+        if (st.zoneMag) {
+            return false;   // the zones file draws where the magazine is taken: there only (the user's rule)
+        }
         float lo[3]{}, hi[3]{};
         if (rocklink::partBox(0, lo, hi)) {
             RE::NiPoint3 l{ lo[0], lo[1], lo[2] }, h{ hi[0], hi[1], hi[2] };

@@ -450,7 +450,9 @@ namespace mrf
         char text[256];
         const std::string label = z.name == "magtop" ? "magtop (magazine tip in the gun: this point enters the well)" :
                                   z.name == "maghold" ? "maghold (where the palm holds a magazine from the belt)" :
-                                  z.name == "hinge" ? "hinge (axis the barrel/breech swings about)" : z.name;
+                                  z.name == "hinge" ? "hinge (axis the barrel/breech swings about)" :
+                                  z.name == "magazine" ? "magazine (where the hand takes the magazine out of the gun)" :
+                                  z.name == "slide" ? "slide (where the hand takes the slide / bolt)" : z.name;
         std::snprintf(text, sizeof(text), "Zone %d/%d: %s (%s). Mode: %s%s%s", ed.sel + 1, static_cast<int>(ed.zones.size()), label.c_str(), zoneTypeName(z.type),
             modes[std::clamp(ed.mode, 0, static_cast<int>(modes.size()) - 1)].c_str(), extra ? ". " : "", extra ? extra : "");
         RE::SendHUDMessage::ShowHUDMessage(text, nullptr, false, false);
