@@ -210,6 +210,7 @@ namespace mrf
         st.driveAlong0 = alongRail(root, shifted.translate);
         st.place = kRailHand;
         st.railHandSince = Clock::now();
+        st.offRail0 = -1.0f;
         st.autoHold = false;
         st.resting = false;
         st.exitAt = 0.0f;
@@ -496,6 +497,7 @@ namespace mrf
                         st.rounds = loose.rounds;
                         st.place = kRailHand;
                         st.railHandSince = Clock::now();
+                        st.offRail0 = -1.0f;
                         // a cell or a core held off by the gun's collision goes straight to the mouth of its socket
                         const float seat = st.zoneMouthKnown ? seatAlong(root, node) : top;
                         st.s = std::clamp(seat, 0.0f, st.cellFed ? mouth + 0.5f : mouth + ahead);

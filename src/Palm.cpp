@@ -1,4 +1,5 @@
 #include "Palm.h"
+#include "RockLink.h"
 
 #include <algorithm>
 #include <array>
@@ -117,6 +118,21 @@ namespace mrf
         if (!st.magBoxKnown) {
             return distance(palm, grabPoint(root)) < g_settings.magGrabRadius;
         }
-        return inBox(st.magLo, st.magHi, inGun(root, palm) - st.axis * st.s, g_settings.contactMargin);
+        const auto local = inGun(root, palm) - st.axis * st.s;
+        if (inBox(st.magLo, st.magHi, local, g_settings.contactMargin)) {
+            return true;
+        }
+        // a zones file draws the grip of one magazine (the 10mm's short one): a longer one fitted to the gun (the 10mm's
+        // large magazine, 7 longer) is taken anywhere on its own box as ROCK measured it (only the part outside the gun)
+        float lo[3]{}, hi[3]{};
+        if (rocklink::partBox(0, lo, hi)) {
+            RE::NiPoint3 l{ lo[0], lo[1], lo[2] }, h{ hi[0], hi[1], hi[2] };
+            // the half of the box toward the way out: the half inside the gun is the grip and the well
+            const auto mid = (l + h) * 0.5f;
+            if (dot(local - mid, st.axis) >= 0.0f && inBox(l, h, local, g_settings.contactMargin)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

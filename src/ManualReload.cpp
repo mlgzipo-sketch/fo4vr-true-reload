@@ -612,10 +612,16 @@ namespace
                 // past the mouth it comes free, and a hand far off is never left glued to a magazine stuck on the rail
                 // (it hung at 7.3 of 6.5 for two seconds and ROCK's hand flew off with it, 0.55)
                 const float offRail = distance(carried.translate, railPose(root, std::clamp(target, 0.0f, st.length + 4.0f)).translate);
+                // measured from where the hand was against the way when it took or caught the magazine (a catch snaps the
+                // magazine onto the line, the hand stays a few units off: that is not a pull; 0.56 caught and let go in a loop)
+                if (st.offRail0 < 0.0f) {
+                    st.offRail0 = offRail;
+                }
+                const float pull = offRail - st.offRail0;
                 const bool pulledAcross = now - st.railHandSince > std::chrono::milliseconds(300) &&
-                                          ((st.s >= st.length - 1.0f && offRail > g_settings.railBreakAway) || offRail > g_settings.railBreakAway * 3.0f);
+                                          ((st.s >= st.length - 1.0f && pull > g_settings.railBreakAway) || pull > g_settings.railBreakAway * 3.0f);
                 if (pulledAcross) {
-                    note("OUT: pulled %.1f across the way out at %.1f of %.1f: the magazine comes free", offRail, st.s, st.length);
+                    note("OUT: pulled %.1f across the way out (%.1f off at the take) at %.1f of %.1f: the magazine comes free", offRail, st.offRail0, st.s, st.length);
                 }
                 if (target > limit || pulledAcross) {
                     // clear of the well: from here it goes with the hand
@@ -704,6 +710,7 @@ namespace
                     // the mouth of the well takes the top of the magazine: from here it moves only along the well
                     st.place = kRailHand;
                     st.railHandSince = Clock::now();
+                    st.offRail0 = -1.0f;
                     const float seat = st.zoneMouthKnown ? seatAlong(root, target) : top;
                     st.s = std::clamp(seat, 0.0f, st.cellFed ? mouth + 0.5f : mouth + ahead);
                     st.exitAt = st.s + 4.0f;
@@ -973,7 +980,9 @@ namespace
             }
             if (looksLikeObject(bolt)) {
                 link.bolt.node = kMovingParts[1];
-                link.bolt.grab = st.slidePointKnown && !justSeated && st.place != kRailAuto;   // a magazine sticking out comes first
+                // a magazine sticking out comes first; one on its way in (in the hand, on the rail) too: the pipe guns' bolt handle is
+                // beside the well, and ROCK moved the hand from the magazine onto it as the magazine was caught (0.56)
+                link.bolt.grab = st.slidePointKnown && !justSeated && st.place != kRailAuto && st.place != kRailHand && st.place != kHand;   // a magazine sticking out comes first
                 link.bolt.point[0] = st.slidePointInBolt.x;
                 link.bolt.point[1] = st.slidePointInBolt.y;
                 link.bolt.point[2] = st.slidePointInBolt.z;
