@@ -285,8 +285,18 @@ namespace mrf
                 }
                 ++used;
             } else if (words[0] == "well" && words.size() >= 9 && words[1] == "mouth" && words[5] == "axis") {
-                const RE::NiPoint3 mouth{ num(2), num(3), num(4) };
-                const RE::NiPoint3 axis{ num(6), num(7), num(8) };
+                RE::NiPoint3 mouth{ num(2), num(3), num(4) };
+                RE::NiPoint3 axis{ num(6), num(7), num(8) };
+                if (st.kind == kGenericKind && st.boxAxisKnown && st.magBoxKnown && dot(axis, axis) > 0.25f &&
+                    dot(normalized(axis), st.nodeAxis) > 0.9995f) {
+                    // a gun of another mod saved with the node's lean (a file written before 0.68, or by the editor): the way out the
+                    // magazine's box allows, through the top of the seated magazine, the mouth as far below it as before
+                    const RE::NiPoint3 topSeated{ (st.magLo.x + st.magHi.x) * 0.5f, (st.magLo.y + st.magHi.y) * 0.5f, st.magHi.z };
+                    const float depth = dot(mouth - topSeated, normalized(axis));
+                    axis = st.boxAxis;
+                    mouth = topSeated + axis * depth;
+                    note("ZONES: the well leant as the magazine node does; turned to the magazine's own line (%.2f %.2f %.2f)", axis.x, axis.y, axis.z);
+                }
                 if (dot(axis, axis) > 0.25f) {
                     st.axis = normalized(axis);
                     st.zoneMouth = mouth;

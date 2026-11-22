@@ -105,6 +105,7 @@ namespace mrf
             st.axis = tiltAxis(12.0f);
             how = "a usual slope (the node gave nothing usable)";
         }
+        st.nodeAxis = st.axis;
         float top = 0.0f;
         if (auto* round = findNamed(magazine, "WeaponMagazineChild1"); looksLikeObject(round)) {
             top = round->local.translate.z;
@@ -197,18 +198,22 @@ namespace mrf
             st.magBoxKnown = true;
             const RE::NiPoint3 middle{ (lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f };
             const float half[3]{ (hi[0] - lo[0]) * 0.5f, (hi[1] - lo[1]) * 0.5f, (hi[2] - lo[2]) * 0.5f };
-            if (st.kind == kGenericKind && !st.zoneWell && g_settings.magTilt < 0.0f && half[2] > 2.0f) {
+            if (st.kind == kGenericKind && g_settings.magTilt < 0.0f && half[2] > 2.0f) {
                 // a gun of another mod built on another gun's nodes: its magazine node leans like that gun's (the DOOM nailgun's
                 // 26 deg, from the 10mm) while its own magazine stands straight. A magazine leaning t is at least
                 // height * tan t deep front to back: a box less deep than that is a straighter magazine, and the well follows it
-                const float nodeTilt = std::atan2(std::fabs(st.axis.y), std::fabs(st.axis.z));
+                const float nodeTilt = std::atan2(std::fabs(st.nodeAxis.y), std::fabs(st.nodeAxis.z));
                 const float boxTilt = std::atan2(half[1], half[2]);   // the most a magazine this deep can lean
                 if (nodeTilt > boxTilt + 0.05f) {
                     const float tilt = std::atan2(std::max(0.0f, half[1] - half[0]), half[2]);   // its own depth taken as its width
-                    const float back = st.axis.y > 0.0f ? -1.0f : 1.0f;
-                    st.axis = tiltAxis(back * tilt * 57.29578f);
+                    const float back = st.nodeAxis.y > 0.0f ? -1.0f : 1.0f;
+                    st.boxAxis = tiltAxis(back * tilt * 57.29578f);
+                    st.boxAxisKnown = true;
+                    if (!st.zoneWell) {
+                        st.axis = st.boxAxis;   // (a zones file read already: it is turned when read again, see zonesFor)
+                    }
                     note("Rail: the magazine's box is too narrow for the node's lean (%.1f deg, the box allows %.1f): the way out leans %.1f deg (%.2f, %.2f, %.2f)",
-                        nodeTilt * 57.29578f, boxTilt * 57.29578f, tilt * 57.29578f, st.axis.x, st.axis.y, st.axis.z);
+                        nodeTilt * 57.29578f, boxTilt * 57.29578f, tilt * 57.29578f, st.boxAxis.x, st.boxAxis.y, st.boxAxis.z);
                 }
             }
             const float a[3]{ std::fabs(st.axis.x), std::fabs(st.axis.y), std::fabs(st.axis.z) };

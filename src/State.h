@@ -217,6 +217,9 @@ namespace mrf
         bool               rackWantKnown{ false };                   // the reload button held and let go: the magazine stays sticking out
         Clock::time_point  wellNearAt{};                  // a real magazine in the hand was last near the well
         Clock::time_point  ghostSince{};                  // ..since then without a break (the colliders at the mouth are off)
+        RE::NiPoint3       nodeAxis{};                    // the way out as the magazine node gives it (before boxes and zones)
+        RE::NiPoint3       boxAxis{};                     // a gun of another mod: the way out its magazine's box allows (straighter)
+        bool               boxAxisKnown{ false };
         std::uint32_t      stallRef{ 0 };                 // a magazine pushed at the mouth: which one, how far in it got, since when no further
         float              stallBest{ 0.0f };
         Clock::time_point  stallAt{};
