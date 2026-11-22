@@ -13,6 +13,8 @@
 //     and wait for the free hand.
 #include "Runtime.h"
 
+#include <random>
+
 #include <F4SE/F4SE.h>
 #include <RE/Fallout.h>
 
@@ -398,6 +400,20 @@ namespace
                     if (ammo == 0 && st.lastAmmo == 1) {
                         st.slideLocked = true;   // the last round of a magazine: the slide stays open
                         detail("Last round fired: slide locked open");
+                    }
+                    // now and then the gun jams: dead trigger until the slide is racked
+                    static std::minstd_rand dice{ static_cast<std::uint32_t>(now.time_since_epoch().count()) };
+                    if (ammo > 0 && g_settings.jamEvery > 0 && st.hasBolt && !st.cellFed && !st.boltAction && st.slidePointKnown &&
+                        dice() % static_cast<std::uint32_t>(g_settings.jamEvery) == 0) {
+                        st.jam = (dice() % 2 == 0) ? 1 : 2;
+                        st.chamber = false;
+                        st.rounds = ammo;            // the round meant for the chamber is still in the magazine
+                        st.spentInChamber = st.jam == 2;
+                        st.jamAt = st.jam == 2 ? 0.45f : 0.15f;
+                        ammo = 0;
+                        gun.data->ammoCount = 0;
+                        buzz(g_settings.gunHand, 2500);
+                        note("JAM: %s (rack the slide)", st.jam == 2 ? "the case stuck in the ejection port" : "the round did not feed");
                     }
                 } else if (ammo != 0) {
                     ammo = 0;                    // no magazine: the chambered round was the only one

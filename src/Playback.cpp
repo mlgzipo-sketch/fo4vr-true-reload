@@ -533,7 +533,9 @@ namespace mrf
                 st.rackWantKnown = false;
             }
             if (!((st.racking || st.pushing) && st.prevHandKnown)) {
-                if (st.slideLocked) {
+                if (st.jamAt > 0.0f && !st.slideLocked) {
+                    st.rackPull = approach(st.rackPull, st.jamAt * travel, 80.0f * dt);   // jammed: out of battery
+                } else if (st.slideLocked) {
                     st.rackPull = approach(st.rackPull, lockAt, 80.0f * dt);
                 } else if (!st.boltAction) {
                     st.rackPull = approach(st.rackPull, 0.0f, 25.0f * travel * dt);
@@ -610,6 +612,11 @@ namespace mrf
         }
         if (!st.rackCycled && !st.slideLocked && st.rackPull >= g_settings.rackTravel * 0.85f) {
             st.rackCycled = true;
+            if (st.jam) {
+                note("JAM: cleared by racking the slide");
+                st.jam = 0;
+                st.jamAt = 0.0f;
+            }
             if (st.chamber || st.spentInChamber) {
                 // out of the ejection port, to the right and up
                 const auto port = looksLikeObject(bolt) ? bolt->world.translate : root->world.translate;

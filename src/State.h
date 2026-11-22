@@ -297,6 +297,8 @@ namespace mrf
         RE::NiTransform    holdInWand{};                   // zones file "hold": the magazine in the hand as it was shown (stick click with one held)
         bool               holdInWandKnown{ false };
         bool               gameBoltAction{ true };
+        int                jam{ 0 };                       // a malfunction: 1 the round did not feed, 2 the case stuck in the port
+        float              jamAt{ 0.0f };                  // ..the slide stays this part of its way back until it is racked
         bool               spentInChamber{ false };        // a bolt action fired: its case waits for the bolt         // the game's own flag for the gun as built (a pipe pistol is not a bolt action)
         float              zoneCatchAhead{ -1.0f };                 // core2: out this far along the well and the magazine has left it
     };

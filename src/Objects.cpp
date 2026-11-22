@@ -413,7 +413,7 @@ namespace mrf
             return;
         }
         const bool open = st.slideLocked || st.rackPull >= g_settings.rackTravel * std::clamp(g_settings.roundOpenAt, 0.05f, 1.0f);
-        const bool inChamber = st.chamber && !st.rackCycled;
+        const bool inChamber = (st.chamber || st.jam == 2) && !st.rackCycled;   // a stuck case is seen in the port
         const bool onMagazine = !inChamber && st.place == kSeated && st.rounds > 0;
         const bool visible = open && (inChamber || onMagazine);
 

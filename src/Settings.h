@@ -74,6 +74,7 @@ namespace mrf
         int   lateGripMs{ 400 };        // a grip closed this long before the palm reached the magazine / the belt still takes it
         bool  injectedInput{ false };   // buttons read as the game sees them (devbench test input), not from the controller itself
         float railBreakAway{ 4.0f };
+        int   jamEvery{ 175 };          // about one shot in this many jams (the round does not feed, or the case sticks in the port); 0 = never
         float partInertia{ 0.0f };      // a slide / bolt follows the hand on a spring this stiff (rad/s; 0 = rigid, lower = heavier)
         bool  ghostGun{ true };         // a real magazine at the well: the gun's collision is off, so it goes into the mouth itself
         float ghostReach{ 6.0f };       // ..when it is lined up and this close to the catch (gun units)
