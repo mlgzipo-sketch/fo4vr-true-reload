@@ -7,6 +7,7 @@
 #include "ROCK/Client.h"
 #include "ROCK/Collision.h"
 #include "ROCK/Grab.h"
+#include "ROCK/Hands.h"
 #include "ROCK/Weapon.h"
 #include "ROCK/WeaponParts.h"
 
@@ -37,6 +38,7 @@ namespace rocklink
         const parts::Api* g_parts{ nullptr };
         const api::grab::Api* g_grab{ nullptr };
         const api::collision::Api* g_collision{ nullptr };
+        const api::hands::Api* g_handsApi{ nullptr };
         std::uint64_t g_grabCommand{ 0 };
 
         std::uint64_t g_key{ 0 };
@@ -488,6 +490,10 @@ namespace rocklink
         const auto partsStatus = g_client.acquire(3, g_parts);
         const auto grabStatus = g_grab ? api::Status::Ok : g_client.acquire(3, g_grab);
         const auto collisionStatus = g_collision ? api::Status::Ok : g_client.acquire(3, g_collision);
+        const auto handsStatus = g_handsApi ? api::Status::Ok : g_client.acquire(1, g_handsApi);
+        if (handsStatus != api::Status::Ok) {
+            say("ROCK: the hands interface was not given (%u): saved magazine holds are not passed to ROCK", static_cast<unsigned>(handsStatus));
+        }
         say("ROCK: collision interface %u (0 = ok): magazines and cases leave the gun without hitting it", static_cast<unsigned>(collisionStatus));
         say("ROCK: grab interface %u (0 = ok): a magazine out of the gun is put straight into the palm", static_cast<unsigned>(grabStatus));
         const char* version = nullptr;
@@ -699,6 +705,60 @@ namespace rocklink
             told = static_cast<std::uint32_t>(status);
             say("ROCK: the held magazine is kept at the saved hold (setHeldObjectTarget): status %u", told);
         }
+        return status == api::Status::Ok;
+    }
+
+    bool heldInHand(int hand, std::uint32_t refFormId, Pose& out) noexcept
+    {
+        if (!g_grab || !g_grab->getHeldObjectPose || !g_handsApi || !g_handsApi->getHandFrame || !refFormId) {
+            return false;
+        }
+        api::grab::HeldObjectPose held{};
+        if (g_grab->getHeldObjectPose(g_client.owner(), rockHand(hand), &held) != api::Status::Ok || held.referenceFormId != refFormId) {
+            return false;
+        }
+        api::hands::HandFrame frame{};
+        if (g_handsApi->getHandFrame(g_client.owner(), rockHand(hand), &frame) != api::Status::Ok ||
+            !(frame.flags & static_cast<std::uint32_t>(api::hands::HandFrameFlag::Valid))) {
+            return false;
+        }
+        // Ni basis rows: row i of a rotation is local axis i in world. The root in the hand: its axes in the hand's
+        // axes (Mo * Mh^T), its place along the hand's axes (Mh * (to - th) / sh)
+        const float* h = frame.transform.rotate;
+        const float* o = held.rootWorld.rotate;
+        const float sh = frame.transform.scale > 0.0f ? frame.transform.scale : 1.0f;
+        for (int r = 0; r < 3; ++r) {
+            for (int c = 0; c < 3; ++c) {
+                float v = 0.0f;
+                for (int k = 0; k < 3; ++k) {
+                    v += o[r * 3 + k] * h[c * 3 + k];
+                }
+                out.rotate[r * 3 + c] = v;
+            }
+        }
+        const float d[3]{ held.rootWorld.translate[0] - frame.transform.translate[0], held.rootWorld.translate[1] - frame.transform.translate[1],
+            held.rootWorld.translate[2] - frame.transform.translate[2] };
+        for (int r = 0; r < 3; ++r) {
+            out.translate[r] = (h[r * 3 + 0] * d[0] + h[r * 3 + 1] * d[1] + h[r * 3 + 2] * d[2]) / sh;
+        }
+        out.scale = 1.0f;
+        return true;
+    }
+
+    bool setDefaultHold(std::uint32_t baseFormId, int hand, const Pose& rootInHand) noexcept
+    {
+        if (!g_grab || !g_grab->setDefaultGrabPoses || !baseFormId) {
+            return false;
+        }
+        api::grab::DefaultGrabPoses poses{};
+        poses.baseFormId = baseFormId;
+        auto& pose = hand == 0 ? poses.right : poses.left;
+        pose.flags = static_cast<std::uint32_t>(api::grab::DefaultPoseFlag::Present);
+        std::memcpy(pose.rotate, rootInHand.rotate, sizeof(pose.rotate));
+        std::memcpy(pose.translateGame, rootInHand.translate, sizeof(pose.translateGame));
+        const auto status = g_grab->setDefaultGrabPoses(g_client.owner(), &poses);
+        say("ROCK: first hold of base form %08X for the %s hand: (%.1f %.1f %.1f), status %u (0 = ok)", baseFormId, hand == 0 ? "right" : "left",
+            rootInHand.translate[0], rootInHand.translate[1], rootInHand.translate[2], static_cast<unsigned>(status));
         return status == api::Status::Ok;
     }
 

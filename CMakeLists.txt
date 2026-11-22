@@ -10,7 +10,7 @@ set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE 
 set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "")
 
-project(ManualReloadF VERSION 0.74.0 LANGUAGES CXX)
+project(ManualReloadF VERSION 0.75.0 LANGUAGES CXX)
 
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 set(COMMON_LIB_F4VR_PATH "${REPO_ROOT}/extern/CommonLibF4VR" CACHE PATH "CommonLibF4VR checkout")
@@ -52,6 +52,8 @@ add_library(ManualReloadF SHARED
   src/Recorder.h
   src/Magazine.cpp
   src/Magazine.h
+  src/MagSlots.cpp
+  src/MagSlots.h
   src/Objects.cpp
   src/Objects.h
   src/Zones.cpp

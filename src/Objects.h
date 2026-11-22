@@ -112,6 +112,7 @@ namespace mrf
     // the gun's magazine model has no collision (DOOM's AK drum, Thompson-like drums): the real magazine is a carrier
     // with a vanilla collision, unseen, wearing that model. Empty when the model has its own collision.
     extern std::string g_genericVisual;
+    extern std::string g_genericFormModel;   // the model of the gun's magazine (another mod's)
     // puts the magazine model on carriers that lack it (just made, or their 3D made again)
     void dressCarriers() noexcept;
 

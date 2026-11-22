@@ -84,6 +84,12 @@ namespace rocklink
     // frame and the next: call every frame. The saved hold of the gun's magazine is kept this way, whatever offset ROCK
     // itself keeps for the object's base form (all magazines of other mods share one).
     bool guideHeld(int hand, std::uint32_t refFormId, const float rotate[9], const float translate[3], float scale) noexcept;
+    // Where the held reference's root stands against the hand ROCK holds it with (the hand's own frame, ROCK's
+    // solved pose): the hold ROCK would give it again. False when that hand does not hold it.
+    bool heldInHand(int hand, std::uint32_t refFormId, Pose& out) noexcept;
+    // ROCK's first hold (a hand with no saved offset of its own) of every reference of this base form: the root this way
+    // against that hand. Later grabs only; kept until ROCK goes. False when ROCK refuses (its answer is logged).
+    bool setDefaultHold(std::uint32_t baseFormId, int hand, const Pose& rootInHand) noexcept;
     // ROCK lets go of that reference.
     bool releaseHeld(int hand, std::uint32_t refFormId) noexcept;
     // ROCK glides a loose object no hand holds toward `rotate`/`translate` (world, game units) with time constant

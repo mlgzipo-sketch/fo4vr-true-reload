@@ -17,6 +17,7 @@
 #include "GripHook.h"
 #include "Gun.h"
 #include "Hands.h"
+#include "MagSlots.h"
 #include "Log.h"
 #include "NiMath.h"
 #include "Nodes.h"
@@ -302,6 +303,8 @@ namespace mrf
 
     std::string g_genericVisual;
 
+    std::string g_genericFormModel;
+
     namespace
     {
         // the carrier: a vanilla magazine with its own collision, about the size of a rifle's
@@ -391,6 +394,7 @@ namespace mrf
                 g_genericVisual = kept;
             }
         }
+        g_genericFormModel = kept;
         static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).SetModel(g_genericVisual.empty() ? kept.c_str() : kCarrierModel);
         note("Magazine: a gun of another mod, its magazine is '%s'%s", kept.c_str(),
             g_genericVisual.empty() ? "" : " (no collision in it: a real one is a carrier wearing it)");
@@ -423,6 +427,9 @@ namespace mrf
         PendingCommand command;
         command.type = kSpawn;
         command.kind = g_state.kind;
+        if (g_state.kind == kGenericKind) {
+            command.kind = magSlotKind(g_state.magModel, g_genericVisual.empty() ? g_genericFormModel.c_str() : kCarrierModel);   // a form of its own kind / its own
+        }
         command.token = token;
         command.pose = poseForScript(loose);
         command.scale = loose.scale > 0.05f && loose.scale < 20.0f ? loose.scale : 1.0f;

@@ -31,6 +31,7 @@
 #include "Playback.h"
 #include "Recorder.h"
 #include "Magazine.h"
+#include "MagSlots.h"
 #include "Objects.h"
 #include "Zones.h"
 #include "Palm.h"
@@ -87,6 +88,7 @@ namespace
         throwCasings(Clock::now());
         tidyLooseRounds(Clock::now());
         dressCarriers();
+        giveSlotHolds(freeIndex());
         readHand(0);
         readHand(1);
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
@@ -1048,7 +1050,12 @@ namespace
             const bool markNow = free.valid && (free.buttons & buttonMask(g_settings.markButton)) != 0 &&
                                  (free.previousButtons & buttonMask(g_settings.markButton)) == 0;
             if (markNow && saveHold(gun)) {
-                hud("Magazine grip saved: magazines from the belt will come like this");
+                std::string said = "Magazine grip saved: magazines from the belt will come like this";
+                if (st.kind == kGenericKind) {
+                    // a magazine of another mod: ROCK takes this hold for its kind of magazine, or for it alone
+                    saveSlotHold(st.magModel, rocklink::heldBy(freeIndex()), freeIndex(), said);
+                }
+                hud(said.c_str());
                 buzz(freeIndex(), 3000);
             } else if (markNow) {
                 ++marks;
