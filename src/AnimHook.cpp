@@ -77,7 +77,8 @@ namespace mrf::animhook
         }
         void** slot = &table[1];
         g_original = reinterpret_cast<Notify_t>(*slot);
-        REL::safe_write(reinterpret_cast<std::uintptr_t>(slot), reinterpret_cast<void*>(&hooked));
+        void* const replacement = reinterpret_cast<void*>(&hooked);
+        REL::safe_write(reinterpret_cast<std::uintptr_t>(slot), &replacement, sizeof(replacement));
         g_slot = slot;
         note("ANIM: the player's animation events are watched (NotifyAnimationGraph, vtable %p slot 1, was %p)", static_cast<void*>(table),
             reinterpret_cast<void*>(g_original));
