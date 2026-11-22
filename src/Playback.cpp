@@ -511,12 +511,33 @@ namespace mrf
                         }
                     }
                     const float lo = st.slideLocked ? lockAt / travel : 0.0f;
-                    st.rackPull = std::clamp(s0 + ds, lo, 1.0f) * travel;
+                    if (!st.rackWantKnown) {
+                        st.rackWant = s0;
+                        st.rackVel = 0.0f;
+                        st.rackWantKnown = true;
+                    }
+                    st.rackWant = std::clamp(st.rackWant + ds, lo, 1.0f);
+                    const float w = g_settings.partInertia;
+                    if (w > 0.5f && dt > 0.0f && dt < 0.1f) {
+                        // the part has a little weight: it follows the hand on a damped spring and lags a jerk
+                        // (ROCK keeps the hand on it, so the hand lags with it)
+                        const float accel = w * w * (st.rackWant - s0) - 2.0f * 0.75f * w * st.rackVel;
+                        st.rackVel += accel * dt;
+                        st.rackPull = std::clamp(s0 + st.rackVel * dt, lo, 1.0f) * travel;
+                    } else {
+                        st.rackPull = st.rackWant * travel;
+                    }
                 }
-            } else if (st.slideLocked) {
-                st.rackPull = approach(st.rackPull, lockAt, 80.0f * dt);
-            } else if (!st.boltAction) {
-                st.rackPull = approach(st.rackPull, 0.0f, 25.0f * travel * dt);
+            }
+            if (!(st.racking || st.pushing)) {
+                st.rackWantKnown = false;
+            }
+            if (!((st.racking || st.pushing) && st.prevHandKnown)) {
+                if (st.slideLocked) {
+                    st.rackPull = approach(st.rackPull, lockAt, 80.0f * dt);
+                } else if (!st.boltAction) {
+                    st.rackPull = approach(st.rackPull, 0.0f, 25.0f * travel * dt);
+                }
             }
             if (st.slideLocked && st.rackPull >= travel * 0.95f) {
                 st.slideLocked = false;   // pulled off the slide stop: let go and it runs home

@@ -455,8 +455,9 @@ namespace
                 } else {
                     logNote("Reload asked before the gun was measured at rest: ignored");
                 }
-            } else if (st.place == kRailAuto) {
+            } else if (st.place == kRailAuto && (st.autoHold || now - st.heldOutAt > std::chrono::milliseconds(800))) {
                 st.autoHold = false;
+                st.resting = false;   // sticking out and the button tapped: it falls (not the release of the hold itself)
             } else if (st.place == kGone) {
                 hud("No magazine: take a new one from your belt (grip with the free hand at the belt)");
             }
@@ -575,10 +576,14 @@ namespace
                 break;   // half in the well: it stays where it was left
             }
             if (st.autoHold) {
-                if (!st.buttonDown) {
-                    st.autoHold = false;   // the button is let go: it falls
-                }
                 st.s = approach(st.s, std::min(g_settings.extendDistance, st.length - 0.5f), g_settings.slideSpeed * dt);
+                if (!st.buttonDown) {
+                    // the button is let go: it stays sticking out for the free hand (a tap of the button drops it)
+                    st.autoHold = false;
+                    st.resting = true;
+                    st.heldOutAt = now;
+                    note("The magazine stays sticking out %.1f (the button let go): the free hand takes it, a tap drops it", st.s);
+                }
             } else {
                 st.s = approach(st.s, st.length + 0.5f, g_settings.slideSpeed * 1.6f * dt);
                 if (st.s >= st.length) {

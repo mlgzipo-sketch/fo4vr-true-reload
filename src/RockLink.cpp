@@ -5,6 +5,7 @@
 #include "RockLink.h"
 
 #include "ROCK/Client.h"
+#include "ROCK/Collision.h"
 #include "ROCK/Grab.h"
 #include "ROCK/Weapon.h"
 #include "ROCK/WeaponParts.h"
@@ -35,6 +36,7 @@ namespace rocklink
         const api::weapon::Api* g_weapon{ nullptr };
         const parts::Api* g_parts{ nullptr };
         const api::grab::Api* g_grab{ nullptr };
+        const api::collision::Api* g_collision{ nullptr };
         std::uint64_t g_grabCommand{ 0 };
 
         std::uint64_t g_key{ 0 };
@@ -471,6 +473,8 @@ namespace rocklink
         const auto weaponStatus = g_client.acquire(3, g_weapon);
         const auto partsStatus = g_client.acquire(3, g_parts);
         const auto grabStatus = g_grab ? api::Status::Ok : g_client.acquire(3, g_grab);
+        const auto collisionStatus = g_collision ? api::Status::Ok : g_client.acquire(3, g_collision);
+        say("ROCK: collision interface %u (0 = ok): magazines and cases leave the gun without hitting it", static_cast<unsigned>(collisionStatus));
         say("ROCK: grab interface %u (0 = ok): a magazine out of the gun is put straight into the palm", static_cast<unsigned>(grabStatus));
         const char* version = nullptr;
         if (g_client.core() && g_client.core()->getModVersion) {
@@ -705,4 +709,37 @@ namespace rocklink
     }
 
     const std::vector<BodiedSource>& bodiedSources() noexcept { return g_bodied; }
+
+    bool clearOfGun(std::uint32_t refFormId, std::uint32_t weaponFormId, bool hands) noexcept
+    {
+        if (!g_collision || !g_collision->requestEjectionClearance || !g_grab || !g_grab->queryReferenceInteraction || !refFormId || !g_key) {
+            return false;
+        }
+        api::grab::ReferenceQuery query{};
+        query.referenceFormId = refFormId;
+        api::grab::ReferenceInteraction found{};
+        g_grab->queryReferenceInteraction(g_client.owner(), &query, &found);
+        api::Sample sample{};
+        if (g_grab->getSample) {
+            g_grab->getSample(g_client.owner(), &sample);
+        }
+        api::collision::EjectionClearanceRequest request{};
+        request.reference.referenceFormId = refFormId;
+        request.reference.referenceNativeHandle = found.referenceNativeHandle;
+        request.reference.worldGeneration = found.worldGeneration ? found.worldGeneration : sample.worldGeneration;
+        request.reference.skeletonGeneration = sample.skeletonGeneration;
+        request.reference.providerGeneration = sample.providerGeneration;
+        request.expectedBase = found.baseFormId;
+        request.weaponGenerationKey = g_key;
+        request.weaponSlot = kSlot;
+        request.weaponFormId = weaponFormId;
+        request.flags = hands ? static_cast<std::uint32_t>(api::collision::EjectionClearanceFlag::IncludeHands) : 0u;
+        const auto status = g_collision->requestEjectionClearance(g_client.owner(), &request);
+        static std::uint32_t told = 999;
+        if (static_cast<std::uint32_t>(status) != told) {
+            told = static_cast<std::uint32_t>(status);
+            say("ROCK: an object leaving the gun does not hit it (requestEjectionClearance): status %u", told);
+        }
+        return status == api::Status::Ok || status == api::Status::RequestQueued;
+    }
 }

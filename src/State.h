@@ -211,6 +211,10 @@ namespace mrf
         bool               boltBoxUsed{ false };
         Clock::time_point  seatedAt{};
         Clock::time_point  railHandSince{};
+        Clock::time_point  heldOutAt{};
+        float              rackWant{ 0.0f };              // where the hand wants the slide (part of its way): it follows with a lag
+        float              rackVel{ 0.0f };
+        bool               rackWantKnown{ false };                   // the reload button held and let go: the magazine stays sticking out
         Clock::time_point  wellNearAt{};                  // a real magazine in the hand was last near the well
         Clock::time_point  ghostSince{};                  // ..since then without a break (the colliders at the mouth are off)
         std::uint64_t      ghostKeys[16]{};               // ..those colliders (ROCK sources whose node holds the mouth)

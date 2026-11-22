@@ -501,6 +501,9 @@ namespace mrf
                 continue;
             }
             if (mag.token <= kCasingTokenBase) {
+                if (g_state.weapon) {
+                    rocklink::clearOfGun(mag.ref, g_state.weapon->GetFormID(), true);   // out of the port past the hands
+                }
                 Casing casing{ mag.ref, Clock::now() };
                 for (auto it = g_casingWays.begin(); it != g_casingWays.end(); ++it) {
                     if (it->token == mag.token) {
@@ -515,6 +518,9 @@ namespace mrf
                 }
                 g_casings.push_back(casing);
                 continue;
+            }
+            if (g_state.weapon) {
+                rocklink::clearOfGun(mag.ref, g_state.weapon->GetFormID(), false);   // made where the gun's magazine was
             }
             Loose loose;
             loose.born = Clock::now();
