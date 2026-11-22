@@ -113,3 +113,15 @@ target_link_options(ManualReloadF PRIVATE
   "$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>"
 )
 set_target_properties(ManualReloadF PROPERTIES PREFIX "")
+
+# Unit tests of the pure geometry (NiMath, Paths): no game needed. CI runs build/Release/ManualReloadF_tests.exe.
+add_executable(ManualReloadF_tests
+  tests/MathTests.cpp
+  src/NiMath.cpp
+  src/Paths.cpp
+)
+target_compile_features(ManualReloadF_tests PRIVATE cxx_std_23)
+target_compile_definitions(ManualReloadF_tests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX NOMMNOSOUND)
+target_include_directories(ManualReloadF_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(ManualReloadF_tests PRIVATE CommonLibF4::CommonLibF4 spdlog::spdlog)
+target_compile_options(ManualReloadF_tests PRIVATE /utf-8 /permissive- /Zc:__cplusplus /Zc:preprocessor)

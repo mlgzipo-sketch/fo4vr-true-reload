@@ -25,6 +25,7 @@ The plugin is still an **early alpha**. Bug reports with the log file (`Document
 | `zones/` | Per-gun zone files (magazine well, slide, hinge, ...), one per weapon FormID |
 | `Meshes/`, `Textures/` | Models used by the plugin |
 | `ManualReloadF.ini` | Settings, with comments |
+| `tests/` | Unit tests of the pure geometry, run by CI on every build |
 | `stubs/` | Minimal Papyrus stubs so scripts compile without the game's sources |
 
 ### Source layout
@@ -52,7 +53,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-The GitHub Actions workflow (`.github/workflows/build.yml`) builds the DLL, compiles the scripts with [Caprica](https://github.com/Orvid/Caprica), writes the ESP and packs a ready-to-install zip. Each build of a branch is published to the `dist/<branch>` branch.
+The GitHub Actions workflow (`.github/workflows/build.yml`) builds the DLL, runs the unit tests (`tests/`, the geometry of transforms and of the ways drawn for each gun), compiles the scripts with [Caprica](https://github.com/Orvid/Caprica), writes the ESP and packs a ready-to-install zip. Each build of a branch is published to the `dist/<branch>` branch.
 
 ## License
 

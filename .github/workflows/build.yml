@@ -47,6 +47,12 @@ jobs:
         shell: pwsh
         run: cmake --build build --config Release
 
+      - name: Unit tests
+        shell: pwsh
+        run: |
+          & build\Release\ManualReloadF_tests.exe
+          if ($LASTEXITCODE -ne 0) { throw "unit tests failed" }
+
       - name: Get Caprica (open-source Papyrus compiler)
         shell: pwsh
         env:
