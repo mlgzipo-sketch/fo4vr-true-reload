@@ -10,6 +10,8 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "Gun.h"
 #include "Hands.h"
@@ -39,6 +41,7 @@ namespace mrf
 
         std::array<Slot, kSlotCount> g_slots;
         std::unordered_map<std::string, int> g_kindOf;   // magazine -> its kind slot (told once, by its size)
+        std::unordered_map<std::string, bool> g_carried;   // magazine -> worn by a carrier (its root is its middle)
         bool g_loaded{ false };
         bool g_given{ false };
         int g_lastSlot{ -1 };   // the slot the last magazine was made from
@@ -92,6 +95,7 @@ namespace mrf
         }
 
         bool giveSlot(int slot, int hand) noexcept;
+        bool save() noexcept;
 
         // "Weapons\DOOM\MAC11\MAC11Mag.nif" -> "mac11mag"
         std::string magKey(const std::string& model)
@@ -125,6 +129,7 @@ namespace mrf
             g_loaded = true;
             std::ifstream in(kSlotsPath);
             int read = 0;
+            std::vector<std::pair<std::string, rocklink::Pose>> moved;
             for (std::string line; std::getline(in, line);) {
                 std::istringstream words(line);
                 std::string head, key;
@@ -145,7 +150,7 @@ namespace mrf
                 if (!(words >> head >> slot >> key) || (head != "kind" && head != "own") || slot < 0 || slot >= kSlotCount) {
                     continue;
                 }
-                if ((head == "kind") != (slot < kClassSlots)) {
+                if (head == "kind" && slot >= kClassSlots) {
                     continue;
                 }
                 rocklink::Pose pose{};
@@ -155,10 +160,29 @@ namespace mrf
                 if (!ok) {
                     continue;
                 }
+                if (head == "own" && slot < kClassSlots) {
+                    moved.push_back({ key, pose });   // an own hold of 0.75 (12..23 are kinds of carried magazines now)
+                    continue;
+                }
                 g_slots[slot].key = key;
                 g_slots[slot].hold = pose;
                 g_slots[slot].hasHold = true;
                 ++read;
+            }
+            for (const auto& [key, pose] : moved) {
+                for (int i = kClassSlots; i < kSlotCount; ++i) {
+                    if (!g_slots[i].hasHold) {
+                        g_slots[i].key = key;
+                        g_slots[i].hold = pose;
+                        g_slots[i].hasHold = true;
+                        ++read;
+                        note("SLOTS: the own hold of '%s' moves to slot %d", key.c_str(), i);
+                        break;
+                    }
+                }
+            }
+            if (!moved.empty()) {
+                save();
             }
             note("SLOTS: %d saved magazine holds read from %s", read, kSlotsPath);
         }
@@ -211,6 +235,8 @@ namespace mrf
             if (const auto it = g_kindOf.find(key); it != g_kindOf.end()) {
                 return it->second;
             }
+            const auto carried = g_carried.find(key);
+            const bool carrier = carried != g_carried.end() && carried->second;
             float lo[3]{}, hi[3]{};
             int shape = 1, size = 1;
             float d[3]{ 0.0f, 0.0f, 0.0f };
@@ -229,10 +255,13 @@ namespace mrf
                     shape = 1;   // a rifle's stick or curved magazine
                 }
             }
-            const int slot = shape * 3 + size;
-            g_kindOf[key] = slot;
-            note("SLOTS: magazine '%s' is a %s %s one (box %.1f x %.1f x %.1f%s): kind slot %d", key.c_str(), kSizes[size], kShapes[shape], d[0], d[1],
-                d[2], measured ? "" : ", not measured by ROCK", slot);
+            // a carried magazine's root is its middle, another's is wherever its model has it: they do not share a hold
+            const int slot = shape * 3 + size + (carrier ? 12 : 0);
+            if (measured) {
+                g_kindOf[key] = slot;   // not measured yet (the gun just drawn): told again next time
+            }
+            note("SLOTS: magazine '%s' is a %s %s one%s (box %.1f x %.1f x %.1f%s): kind slot %d", key.c_str(), kSizes[size], kShapes[shape],
+                carrier ? ", worn by a carrier" : "", d[0], d[1], d[2], measured ? "" : ", not measured by ROCK", slot);
             return slot;
         }
 
@@ -247,10 +276,14 @@ namespace mrf
         }
     }
 
-    int magSlotKind(const std::string& magModel, const char* formModel) noexcept
+    int magSlotKind(const std::string& magModel, const char* formModel, bool carrier) noexcept
     {
         load();
         const auto key = magKey(magModel);
+        if (g_carried[key] != carrier) {
+            g_carried[key] = carrier;
+            g_kindOf.erase(key);
+        }
         int slot = ownSlot(key);
         if (slot < 0) {
             slot = kindSlot(key);
@@ -295,7 +328,7 @@ namespace mrf
                 }
                 how = "a hold of its own (its kind keeps the hold of another magazine)";
                 if (slot < 0) {
-                    said = "No room for another magazine's own hold (52 are taken)";
+                    said = "No room for another magazine's own hold (40 are taken)";
                     note("SLOTS: all own slots are taken: '%s' keeps its kind's hold", key.c_str());
                     return false;
                 }
