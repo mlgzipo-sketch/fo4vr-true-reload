@@ -1035,7 +1035,7 @@ namespace mrf
                 if (click && !clickWas) {
                     clickDown = now;
                 }
-                if (!click && clickWas && now - clickDown < std::chrono::milliseconds(500) && gun.weapon) {
+                if (!click && clickWas && now - clickDown < std::chrono::milliseconds(900) && gun.weapon) {
                     const auto hold = holdAgainst(spare.wand, object->world);
                     if (squareRotation(hold))
                     writeHoldLine(gun.weapon->GetFormID(), "roundhold", hold);

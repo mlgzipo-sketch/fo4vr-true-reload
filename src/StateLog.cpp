@@ -89,6 +89,13 @@ namespace mrf
             auto* mag3D = ref ? ref->Get3D() : nullptr;
             if (looksLikeObject(mag3D) && loose.kind == st.kind && distance(mag3D->worldBound.center, free.palm) < g_settings.handRadius + 4.0f) {
                 node = compose(mag3D->world, inverse(st.looseInNode));
+                if (!squareRotation(holdAgainst(free.wand, node))) {
+                    // the loose model's place against the node is broken (logs of 0.76: the combat shotgun's drum after taking
+                    // the gun out again): the real magazine's own pose is used as it is
+                    note("HOLD: the magazine's place against the gun's node is broken (scale %.3f): taken from the real magazine itself",
+                        st.looseInNode.scale);
+                    node = mag3D->world;
+                }
                 found = true;
             }
         }
