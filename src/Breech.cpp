@@ -838,8 +838,10 @@ namespace mrf
         }
 
         // the alien blaster: its cell pops out by itself as the cover opens (as pulling it by hand)
+        static Clock::time_point poppedFor{};   // once each time the cover opens: a new cell put in stays in (logs of 0.76.3)
         if (cellCover && g_settings.cellPopsOut && b.open && b.t >= 0.6f && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
-            now - b.opened > std::chrono::milliseconds(200)) {
+            now - b.opened > std::chrono::milliseconds(200) && poppedFor != b.opened) {
+            poppedFor = b.opened;
             note("The cell popped out as the cover opened: %u rounds back to the pouch", b.live);
             g_throwAmmoItself = true;
                 ejectCasings(gun, root, cellNode->world.translate, (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
@@ -979,6 +981,11 @@ namespace mrf
                 close("pushed shut by the palm");
             }
             b.pushing = false;
+        }
+        // the alien blaster: with a cell in, the open hand touching the cover shuts it
+        if (cellCover && b.open && b.live > 0 && b.held == 0 && spare.valid && !spare.grip && !atBelt &&
+            now - b.loadedAt > std::chrono::milliseconds(300) && touchesPart(8.0f)) {
+            close("the cover touched");
         }
         // the round from the belt as a real object: ROCK is asked to put it in the hand; held, it is not drawn.
         // Let go once ROCK had it, it is gone (the rounds stay with the ammo carried); not taken in time, it is drawn.
