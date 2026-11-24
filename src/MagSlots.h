@@ -29,4 +29,8 @@ namespace mrf
 
     // Once ROCK is there: the holds saved before are given to it again.
     void giveSlotHolds(int hand) noexcept;
+
+    // Each frame a magazine of another mod is held by ROCK: once settled, where ROCK put it against its saved hold tells
+    // ROCK's own grab frame; the holds are given again in it when they are off.
+    void watchSlotHold(int hand, std::uint32_t heldRef) noexcept;
 }

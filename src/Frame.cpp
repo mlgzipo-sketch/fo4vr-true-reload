@@ -25,6 +25,7 @@
 #include "Hands.h"
 #include "Log.h"
 #include "Magazine.h"
+#include "MagSlots.h"
 #include "NiMath.h"
 #include "Nodes.h"
 #include "Objects.h"
@@ -69,6 +70,9 @@ namespace mrf
                 st.grabDone = true;
                 note("CORE2: ROCK holds magazine %08X in the palm (%.2f s, %d asks)", st.handRef,
                     std::chrono::duration<float>(now - st.handRefAt).count(), st.grabTries);
+            }
+            if (st.kind == kGenericKind) {
+                watchSlotHold(freeIndex(), st.handRef);   // ROCK's own frame for the holds saved against the hand
             }
             // the saved hold of this gun (and this magazine) is how it lies in the hand, not ROCK's own offset
             if (g_settings.keepHold && st.holdInWandKnown && free.valid) {
