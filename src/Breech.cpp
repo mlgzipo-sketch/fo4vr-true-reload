@@ -838,13 +838,18 @@ namespace mrf
         }
 
         // the alien blaster: its cell pops out by itself as the cover opens (as pulling it by hand)
+        // where the cell itself is: its geometry hangs on WeaponMagazineChild1, 27 off the WeaponMagazine node (that is behind the grip)
+        const auto cellAt = [&]() {
+            auto* geometry = findNamed(root, "WeaponMagazineChild1");
+            return looksLikeObject(geometry) ? geometry->world.translate : cellNode->world.translate;
+        };
         static Clock::time_point poppedFor{};   // once each time the cover opens: a new cell put in stays in (logs of 0.76.3)
         if (cellCover && g_settings.cellPopsOut && b.open && b.t >= 0.6f && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
             now - b.opened > std::chrono::milliseconds(200) && poppedFor != b.opened) {
             poppedFor = b.opened;
             note("The cell popped out as the cover opened: %u rounds back to the pouch", b.live);
             g_throwAmmoItself = true;
-                ejectCasings(gun, root, cellNode->world.translate, (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
+                ejectCasings(gun, root, cellAt(), (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
                 g_throwAmmoItself = false;
             b.live = 0;
             b.spent = 0;
@@ -908,10 +913,10 @@ namespace mrf
                     note("BELT: %u round(s) in the free hand", take);
                 }
             } else if (cellCover && !atBelt && b.held == 0 && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
-                       distance(spare.palm, cellNode->world.translate) < 8.0f * scale) {
+                       distance(spare.palm, cellAt()) < 8.0f * scale) {
                 note("The cell is pulled out by hand: %u rounds back to the pouch", b.live);
                 g_throwAmmoItself = true;
-                ejectCasings(gun, root, cellNode->world.translate, axisOf(root->world, 2) * -1.0f, 1, "the alien blaster's cell");
+                ejectCasings(gun, root, cellAt(), axisOf(root->world, 2) * -1.0f, 1, "the alien blaster's cell");
                 g_throwAmmoItself = false;
                 b.live = 0;
                 b.spent = 0;
