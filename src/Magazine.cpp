@@ -528,9 +528,13 @@ namespace mrf
                     const float mouth = st.length;
                     // the gun's own collision stops a real magazine a hand's width short of the mouth, so
                     // the catch reaches out past it and forgives the hand a little to the side
-                    const float sideMax = g_settings.core2 ? (st.zoneCatchSide > 0.0f ? st.zoneCatchSide : g_settings.catchSide) : g_settings.wellSide;
+                    const float sideMax = (g_settings.core2 ? (st.zoneCatchSide > 0.0f ? st.zoneCatchSide : g_settings.catchSide) : g_settings.wellSide) +
+                                          (dot(st.carrierAt, st.carrierAt) > 1e-6f ? 1.5f : 0.0f);   // a carrier's drum: a little more to the side
                     // a cell, a core or a drum is taken anywhere along its short way in, not only at the mouth
-                    const float below = st.cellFed ? mouth + 1.5f : (g_settings.core2 ? 1.5f : 3.0f);
+                    // a vanilla magazine worn on a carrier (the Thompson's drums) is taken anywhere along its way in too:
+                    // it was read 4-5 past the mouth, 2-3 off the line when pushed in (logs of 0.76)
+                    const bool carried = dot(st.carrierAt, st.carrierAt) > 1e-6f;
+                    const float below = st.cellFed || carried ? mouth + 1.5f : (g_settings.core2 ? 1.5f : 3.0f);
                     const float ahead = g_settings.core2 ? (st.zoneCatchAhead > 0.0f ? st.zoneCatchAhead : g_settings.catchAhead) : g_settings.captureAhead;
                     // the zone is taken as drawn (in Blender or in the game's zone editor): no minimum of its own.
                     // With a mouth in the zones file the cylinder itself is the test: the magazine's top inside it.

@@ -1041,7 +1041,7 @@ namespace mrf
                     writeHoldLine(gun.weapon->GetFormID(), "roundhold", hold);
                     st.roundHold = hold;
                     st.roundHoldKnown = true;
-                    hud("Round grip saved: rounds from the belt will come like this");
+                    hud("Round grip saved for the belt (a grip saved in ROCK wins over it)");
                     buzz(freeIndex(), 3000);
                 }
                 clickWas = click;

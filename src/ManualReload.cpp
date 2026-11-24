@@ -1052,7 +1052,7 @@ namespace
             const bool markNow = free.valid && (free.buttons & buttonMask(g_settings.markButton)) != 0 &&
                                  (free.previousButtons & buttonMask(g_settings.markButton)) == 0;
             if (markNow && saveHold(gun)) {
-                std::string said = "Magazine grip saved: magazines from the belt will come like this";
+                std::string said = "Magazine grip saved for the belt (a grip saved in ROCK wins over it)";
                 if (st.kind == kGenericKind && g_settings.magSlots) {
                     // a magazine of another mod: ROCK takes this hold for its kind of magazine, or for it alone
                     saveSlotHold(st.magModel, rocklink::heldBy(freeIndex()), freeIndex(), said);
