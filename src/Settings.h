@@ -107,6 +107,10 @@ namespace mrf
         bool  carrierMags{ true };
         bool  carrierVanilla{ false };    // 1 = a vanilla magazine whose model has no collision (it hangs in the air) is a carrier wearing it, as other mods' are
         bool  cellPopsOut{ true };       // 1 = the alien blaster's cell pops out by itself as the cover opens
+        bool  handleProxy{ false };      // 1 = (experiment) the slide's handle is taken through a small unseen object ROCK holds like any small item
+        bool  handleProxyShow{ false };  // 1 = that object is seen (to check where it is)
+        float handleProxySlip{ 8.0f };   // the controller this far off it (game units): the hand lets go of it (0 = never)
+        std::string handleProxyGuns{ "0004F46A,20040000" };   // the guns it is for (form ids, hex; * = all)
         bool  magSlots{ false };         // 1 = magazines of other mods on slot forms and saved holds given to ROCK (0.75 test; off = as 0.74)
         bool  keepHold{ false };         // a magazine ROCK holds is kept at the gun's saved hold (stick click)      // a magazine model with no collision is worn by an unseen vanilla magazine
         bool  pinchHandle{ true };      // a rifle's charging handle / bolt knob is taken with thumb and index, not the fist

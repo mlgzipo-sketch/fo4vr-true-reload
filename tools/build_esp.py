@@ -44,6 +44,8 @@ IDS = {'MRF_Mag10mm': 0x800, 'MRF_Mag10mmLarge': 0x801, 'MRF_SndIn': 0x802, 'MRF
 # large) and one per magazine whose hold was saved, so ROCK keeps each one's hold on its own base form
 for i in range(64):
     IDS['MRF_MagSlot%02d' % i] = 0x82F + i
+# kind 98: an unseen small thing at a gun's charging handle that ROCK holds like any small item (bHandleProxy)
+IDS['MRF_MagHandleProxy'] = 0x86F
 recs = {}
 def add(tag, edid, subs):
     fid = OWN | IDS[edid]
@@ -90,6 +92,7 @@ MODELS = [('10mm', 'Weapons\\10mmPistol\\10mmMag01.nif', '10mm Magazine'),
           # the magazine of a gun from another mod (or a DLC): the plugin sets its model from the gun's magazine mod
           ('Generic', 'Weapons\\10mmPistol\\10mmMag01.nif', 'Magazine')]
 MODELS += [('Slot%02d' % i, 'Weapons\\10mmPistol\\10mmMag01.nif', 'Magazine') for i in range(64)]
+MODELS += [('HandleProxy', 'Weapons\\Shells\\10mmShell.nif', 'Charging Handle')]
 mags = [add('MISC', 'MRF_Mag' + k, [sub('OBND', b'\0' * 12), sub('FULL', zstr(name)), sub('MODL', zstr(model)),
                                     sub('DATA', struct.pack('<If', 0, 0.0))]) for k, model, name in MODELS]
 

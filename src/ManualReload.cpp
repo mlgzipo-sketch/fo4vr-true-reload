@@ -101,6 +101,13 @@ namespace
                 dropHandRound("the gun is not open for it any more");
             }
         }
+        // the handle proxy lives only while its slide is held on its gun
+        if (g_handleProxy.asked && !(g_state.weapon && g_state.weapon->GetFormID() == g_handleProxy.weapon && g_state.racking)) {
+            dropHandleProxy("the slide is not held any more");
+        }
+        if (!g_state.racking) {
+            g_handleProxy.spent = false;
+        }
         auto& st = g_state;
         const auto now = Clock::now();
         float dt = st.lastFrame == Clock::time_point{} ? 0.011f : std::chrono::duration<float>(now - st.lastFrame).count();
@@ -914,8 +921,9 @@ namespace
             st.alignActive = false;
         }
         float handlePoint[3]{};
-        const bool pinch = g_settings.pinchHandle && (g_rock.onBolt || st.racking) && rocklink::boltHandle(handlePoint);
-        poseFingers(pinch || (!rockHolds && (st.place == kRailHand || st.place == kHand || st.racking || st.leverHeld)), pinch);
+        const bool proxyHeld = g_handleProxy.held;   // ROCK closes the hand on the handle proxy by its shape
+        const bool pinch = !proxyHeld && g_settings.pinchHandle && (g_rock.onBolt || st.racking) && rocklink::boltHandle(handlePoint);
+        poseFingers(!proxyHeld && (pinch || (!rockHolds && (st.place == kRailHand || st.place == kHand || st.racking || st.leverHeld))), pinch);
         // a magazine on the rail is moved by the plugin alone: if ROCK saw the grip it would take the gun's
         // magazine part with this hand and pull it straight back out (the laser cell, 0.35)
         if (st.place == kRailHand && free.grip && !griphook::owned()) {

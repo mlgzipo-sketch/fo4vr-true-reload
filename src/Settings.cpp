@@ -35,7 +35,7 @@ namespace mrf
             { "bAllGuns", 0, &s.allGuns }, { "bRockParts", 0, &s.rockParts }, { "bRockBeltHandover", 0, &s.rockBeltHandover },
             { "bHoldPoseOnExit", 0, &s.holdPoseOnExit }, { "bBreech", 0, &s.breech }, { "bRecordAnim", 0, &s.recordAnim }, { "bAutoRecord", 0, &s.autoRecord }, { "bRecordedBolt", 0, &s.recordedBolt }, { "bRealInHand", 0, &s.realInHand }, { "bCore2", 0, &s.core2 }, { "fContactMargin", 2, &s.contactMargin }, { "iMarkButton", 1, &s.markButton }, { "bStopEmptyReload", 0, &s.stopEmptyReload }, { "fCatchSide", 2, &s.catchSide }, { "fCatchAhead", 2, &s.catchAhead }, { "fPushFactor", 2, &s.pushFactor }, { "bTraceState", 0, &s.traceState }, { "bBlockAnimReload", 0, &s.blockAnimReload }, { "bTraceAnim", 0, &s.traceAnim }, { "iLateGripMs", 1, &s.lateGripMs }, { "bInjectedInput", 0, &s.injectedInput }, { "fRailBreakAway", 2, &s.railBreakAway }, { "fPartInertia", 2, &s.partInertia }, { "iJamEvery", 1, &s.jamEvery }, { "bGhostGun", 0, &s.ghostGun }, { "fGhostReach", 2, &s.ghostReach }, { "fGhostSide", 2, &s.ghostSide }, { "fGhostCatchAhead", 2, &s.ghostCatchAhead }, { "fCylinderSwing", 2, &s.cylinderSwing },
             { "fBreakAngle", 2, &s.breakAngle }, { "fFlickSpeed", 2, &s.flickSpeed }, { "fFlickTurn", 2, &s.flickTurn }, { "fHingeHold", 2, &s.hingeHold }, { "fBreechRadius", 2, &s.breechRadius }, { "fChamberReach", 2, &s.chamberReach }, { "bRockPlacesHeld", 0, &s.rockPlacesHeld }, { "bNativeSound", 0, &s.nativeSound }, { "iSoundFlags", 1, &s.soundFlags }, { "bShowRound", 0, &s.showRound }, { "fRoundOpenAt", 2, &s.roundOpenAt }, { "fChamberUp", 2, &s.chamberUp },
-            { "fChamberForward", 2, &s.chamberForward }, { "fRoundUp", 2, &s.roundUp }, { "fRoundRotX", 2, &s.roundRotX }, { "fJamTilt", 2, &s.jamTilt }, { "bPinchHandle", 0, &s.pinchHandle }, { "bCarrierMags", 0, &s.carrierMags }, { "bCarrierVanilla", 0, &s.carrierVanilla }, { "bCellPopsOut", 0, &s.cellPopsOut }, { "bKeepHold", 0, &s.keepHold }, { "bMagSlots", 0, &s.magSlots }, { "fPinchThumb", 2, &s.pinchThumb }, { "fPinchIndex", 2, &s.pinchIndex }, { "fPinchOthers", 2, &s.pinchOthers }, { "fJamOut", 2, &s.jamOut },
+            { "fChamberForward", 2, &s.chamberForward }, { "fRoundUp", 2, &s.roundUp }, { "fRoundRotX", 2, &s.roundRotX }, { "fJamTilt", 2, &s.jamTilt }, { "bPinchHandle", 0, &s.pinchHandle }, { "bCarrierMags", 0, &s.carrierMags }, { "bCarrierVanilla", 0, &s.carrierVanilla }, { "bCellPopsOut", 0, &s.cellPopsOut }, { "bHandleProxy", 0, &s.handleProxy }, { "bHandleProxyShow", 0, &s.handleProxyShow }, { "fHandleProxySlip", 2, &s.handleProxySlip }, { "bKeepHold", 0, &s.keepHold }, { "bMagSlots", 0, &s.magSlots }, { "fPinchThumb", 2, &s.pinchThumb }, { "fPinchIndex", 2, &s.pinchIndex }, { "fPinchOthers", 2, &s.pinchOthers }, { "fJamOut", 2, &s.jamOut },
             { "fRoundRotY", 2, &s.roundRotY }, { "fRoundRotZ", 2, &s.roundRotZ }, { "fRoundScale", 2, &s.roundScale }, { "bCasings", 0, &s.casings }, { "bRealRounds", 0, &s.realRounds }, { "fCasingImpulse", 2, &s.casingImpulse }, { "fCasingSpeed", 2, &s.casingSpeed }, { "fCasingSpin", 2, &s.casingSpin }, { "fChamberCaseSpeed", 2, &s.chamberCaseSpeed }, { "iCasingThrowMs", 1, &s.casingThrowMs }, { "fCasingSeconds", 2, &s.casingSeconds }, { "iCasingMax", 1, &s.casingMax },
         };
         try {
@@ -51,6 +51,13 @@ namespace mrf
                     key.pop_back();
                 }
                 const float value = std::strtof(line.c_str() + equals + 1, nullptr);
+                if (key == "sHandleProxyGuns") {
+                    auto text = line.substr(equals + 1);
+                    const auto first = text.find_first_not_of(" \t");
+                    const auto last = text.find_last_not_of(" \t\r");
+                    s.handleProxyGuns = first == std::string::npos ? std::string{} : text.substr(first, last - first + 1);
+                    continue;
+                }
                 if (key == "sRoundModel") {
                     auto text = line.substr(equals + 1);
                     const auto first = text.find_first_not_of(" \t");

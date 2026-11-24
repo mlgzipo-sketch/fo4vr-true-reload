@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <deque>
@@ -237,6 +238,52 @@ namespace mrf
             note("ROUND: the real round %08X is gone (%s)", g_beltRound.ref, why);
         }
         g_beltRound = BeltRound{};
+    }
+
+    HandleProxy g_handleProxy;
+    int g_proxyOrphans = 0;
+
+    void dropHandleProxy(const char* why) noexcept
+    {
+        auto& px = g_handleProxy;
+        if (px.ref) {
+            if (rocklink::heldBy(freeIndex()) == px.ref) {
+                rocklink::releaseHeld(freeIndex(), px.ref);
+            }
+            PendingCommand command;
+            command.type = kDelete;
+            command.ref = px.ref;
+            pushCommand(command);
+        } else if (px.asked) {
+            ++g_proxyOrphans;
+        }
+        if (px.asked) {
+            note("HANDLE: the handle proxy %08X is gone (%s)", px.ref, why);
+        }
+        const bool spent = px.spent;
+        px = HandleProxy{};
+        px.spent = spent;
+    }
+
+    bool handleProxyGun(std::uint32_t weapon) noexcept
+    {
+        const auto& list = g_settings.handleProxyGuns;
+        if (list.find('*') != std::string::npos) {
+            return true;
+        }
+        std::size_t i = 0;
+        while (i < list.size()) {
+            const auto end = list.find_first_of(",; ", i);
+            const auto item = list.substr(i, end == std::string::npos ? std::string::npos : end - i);
+            if (!item.empty() && static_cast<std::uint32_t>(std::strtoul(item.c_str(), nullptr, 16)) == weapon) {
+                return true;
+            }
+            if (end == std::string::npos) {
+                break;
+            }
+            i = end + 1;
+        }
+        return false;
     }
 
     std::vector<LooseRound> g_looseRounds;
@@ -665,6 +712,19 @@ namespace mrf
         for (const auto& mag : mags) {
             if (mag.token == kRoundToken) {
                 takeRound(mag.ref);
+                continue;
+            }
+            if (mag.token == kProxyToken) {
+                auto& px = g_handleProxy;
+                if (g_proxyOrphans > 0 || !px.asked || px.ref) {
+                    g_proxyOrphans = std::max(0, g_proxyOrphans - 1);
+                    deleteRef(mag.ref);
+                    detail("HANDLE: proxy %08X came too late: deleted", mag.ref);
+                    continue;
+                }
+                px.ref = mag.ref;
+                px.grabAt = Clock::time_point{};
+                note("HANDLE: proxy %08X is here (%.2f s)", mag.ref, std::chrono::duration<float>(Clock::now() - px.askedAt).count());
                 continue;
             }
             if (mag.token == kPoseToken) {

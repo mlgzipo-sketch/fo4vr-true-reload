@@ -81,6 +81,28 @@ namespace mrf
 
     extern BeltRound g_beltRound;
 
+    // bHandleProxy: an unseen small thing at the charging handle, put into the hand through ROCK as the slide is taken,
+    // so ROCK closes the hand on it as on any small item (on the handle, pinched) and the plugin leads it along the slide's way
+    inline constexpr std::int32_t kHandleProxyKind = 98;   // MRF_MagHandleProxy
+    inline constexpr std::int32_t kProxyToken = -9;
+    struct HandleProxy
+    {
+        bool              asked{ false };
+        bool              spent{ false };    // tried once this take: not again until the grip opens
+        std::uint32_t     ref{ 0 };
+        std::uint32_t     weapon{ 0 };
+        Clock::time_point askedAt{};
+        Clock::time_point grabAt{};
+        int               grabTries{ 0 };
+        bool              held{ false };
+        RE::NiPoint3      anchor{};          // its point on the slide's way (as the hand's anchor is kept)
+        RE::NiPoint3      wandOff{};         // the controller against it when ROCK took it (the gun's frame)
+    };
+    extern HandleProxy g_handleProxy;
+    extern int g_proxyOrphans;
+    void dropHandleProxy(const char* why) noexcept;
+    bool handleProxyGun(std::uint32_t weapon) noexcept;
+
     extern int g_roundOrphans;   // asked for and given up before they came: deleted when they come
 
     void dropHandRound(const char* why) noexcept;

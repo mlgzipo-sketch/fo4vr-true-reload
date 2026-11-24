@@ -445,6 +445,110 @@ namespace mrf
     // The slide: grip it with the free hand, pull it back along the gun, let it go forward.
     // All the way back throws out the chambered round; going forward takes the next one from the magazine.
 
+    // bHandleProxy (experiment): as the slide is taken, a small unseen object is made at its charging handle and put
+    // into the hand through ROCK, which closes the hand on it as on any small item (on the handle, pinched); each
+    // frame ROCK keeps it where the handle is on the slide's way. The slide itself still goes by the controller.
+    template <class WayPointOf, class AnchorOf>
+    void handleProxy(const Gun& gun, RE::NiAVObject* root, const Hand& spare, const RE::NiPoint3& handLocal,
+        const WayPointOf& wayPointOf, const AnchorOf& anchorOf, float s0, float travel) noexcept
+    {
+        auto& st = g_state;
+        auto& px = g_handleProxy;
+        const auto now = Clock::now();
+        const std::uint32_t weapon = gun.weapon ? gun.weapon->GetFormID() : 0;
+        const bool want = g_settings.handleProxy && st.racking && weapon != 0 && handleProxyGun(weapon);
+        if (!st.racking) {
+            px.spent = false;
+        }
+        if (px.asked && (!want || px.weapon != weapon)) {
+            dropHandleProxy(st.racking ? "not for this gun" : "the slide was let go");
+        }
+        if (!want) {
+            return;
+        }
+        const float sNow = std::clamp(st.rackPull / std::max(travel, 0.01f), 0.0f, 1.0f);
+        auto worldPose = [&]() {
+            RE::NiTransform pose = root->world;
+            pose.translate = compose(root->world, pointTransform(wayPointOf(px.anchor, sNow))).translate;
+            pose.scale = 1.0f;
+            return pose;
+        };
+        if (!px.asked && !px.spent) {
+            const char* from = "where the hand took the slide";
+            px.anchor = st.handInBolt;
+            float handle[3]{};
+            if (const auto it = st.zonePoints.find("handle"); it != st.zonePoints.end()) {
+                px.anchor = anchorOf(it->second, 0.0f);
+                from = "the zones file's point handle";
+            } else if (rocklink::boltHandle(handle)) {
+                px.anchor = anchorOf(RE::NiPoint3{ handle[0], handle[1], handle[2] }, s0);
+                from = "the bolt handle ROCK found";
+            }
+            PendingCommand command;
+            command.type = kCasing;
+            command.kind = kHandleProxyKind;
+            command.token = kProxyToken;
+            command.pose = poseForScript(worldPose());
+            command.impulse = { 0.0f, 0.0f, 0.0f, 0.0f };
+            pushCommand(command);
+            px.asked = true;
+            px.spent = true;
+            px.askedAt = now;
+            px.weapon = weapon;
+            const auto at = wayPointOf(px.anchor, sNow);
+            note("HANDLE: a proxy is asked for %08X at %s (%.1f %.1f %.1f in the gun; the hand at %.1f %.1f %.1f)", weapon, from,
+                at.x, at.y, at.z, handLocal.x, handLocal.y, handLocal.z);
+            return;
+        }
+        if (!px.ref) {
+            if (px.asked && now - px.askedAt > std::chrono::seconds(3)) {
+                dropHandleProxy("the object never came");
+            }
+            return;
+        }
+        auto* ref = lookupRef(px.ref);
+        auto* object = ref ? ref->Get3D() : nullptr;
+        if (looksLikeObject(object) && !g_settings.handleProxyShow) {
+            setCulled(object, true);
+        }
+        const auto pose = worldPose();
+        const auto lp = toLinkPose(pose);
+        const float scale = looksLikeObject(object) ? object->world.scale : 1.0f;
+        const bool rockHas = rocklink::heldBy(freeIndex()) == px.ref;
+        if (rockHas && !px.held) {
+            px.held = true;
+            px.wandOff = handLocal - wayPointOf(px.anchor, sNow);
+            note("HANDLE: ROCK holds the proxy %08X (%.2f s, %d asks)", px.ref,
+                std::chrono::duration<float>(now - px.askedAt).count(), px.grabTries);
+        }
+        if (px.held && !rockHas) {
+            dropHandleProxy("ROCK let go of it");
+            return;
+        }
+        if (px.held) {
+            const auto off = handLocal - wayPointOf(px.anchor, sNow) - px.wandOff;
+            const float slip = std::sqrt(dot(off, off)) * gunScale(root);
+            if (g_settings.handleProxySlip > 0.0f && slip > g_settings.handleProxySlip) {
+                dropHandleProxy("the hand slipped off the handle");
+                return;
+            }
+            rocklink::guideHeld(freeIndex(), px.ref, lp.rotate, lp.translate, scale);
+            return;
+        }
+        if (now - px.askedAt > std::chrono::milliseconds(2500)) {
+            dropHandleProxy("ROCK did not take it");
+            return;
+        }
+        rocklink::driveLoose(px.ref, lp.rotate, lp.translate, 0.03f, "the handle proxy");
+        if (spare.valid && spare.grip && px.grabTries < 6 && now - px.grabAt > std::chrono::milliseconds(300)) {
+            px.grabAt = now;
+            ++px.grabTries;
+            griphook::setOwned(false);   // the grip is ROCK's to take it with
+            const float point[3]{ pose.translate.x, pose.translate.y, pose.translate.z };
+            rocklink::forceGrab(freeIndex(), px.ref, point);
+        }
+    }
+
     void rackByHand(const Gun& gun, RE::NiAVObject* root, RE::NiAVObject* bolt, float dt) noexcept
     {
         auto& st = g_state;
@@ -474,15 +578,26 @@ namespace mrf
             // along that way (motion across it is ignored): gripped it stays taken until the grip opens, open-handed
             // it is pushed only while the palm is on it. Let go, a slide springs home, a bolt action stays put.
             const float s0 = std::clamp(st.rackPull / travel, 0.0f, 1.0f);
-            auto wayPoint = [&](float s) {
+            auto wayPointOf = [&](const RE::NiPoint3& anchorPoint, float s) {
                 s = std::clamp(s, 0.0f, 1.0f);
                 if (route) {
-                    return routeApply(s, st.handInBolt);
+                    return routeApply(s, anchorPoint);
                 }
                 if (path) {
-                    return compose(boltWay(s), pointTransform(st.handInBolt)).translate;
+                    return compose(boltWay(s), pointTransform(anchorPoint)).translate;
                 }
-                return st.handInBolt + RE::NiPoint3{ 0.0f, -s * travel, 0.0f };
+                return anchorPoint + RE::NiPoint3{ 0.0f, -s * travel, 0.0f };
+            };
+            auto wayPoint = [&](float s) { return wayPointOf(st.handInBolt, s); };
+            // a point of the gun (its frame) where the part stands at s: its anchor on the part's way
+            auto anchorOf = [&](const RE::NiPoint3& q, float s) {
+                if (route) {
+                    return routeInverse(s, q);
+                }
+                if (path) {
+                    return relative(boltWay(s), pointTransform(q)).translate;
+                }
+                return q + RE::NiPoint3{ 0.0f, s * travel, 0.0f };
             };
             auto shiftNow = [&]() {
                 if (route) {
@@ -581,6 +696,7 @@ namespace mrf
                 playSound(2);
                 logNote("RACK: slide pulled off the stop");
             }
+            handleProxy(gun, root, spare, handLocal, wayPointOf, anchorOf, s0, travel);
         } else {
             if (!st.racking && spare.valid && spare.grip && ((!spare.previousGrip && !handBusy) || rockTook)) {
                 const float toSlide = st.place != kRailAuto ? distance(spare.palm, slideGrabPoint(root, bolt)) : 1e9f;
