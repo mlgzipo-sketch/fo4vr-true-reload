@@ -837,6 +837,17 @@ namespace mrf
             buzz(g_settings.gunHand, 1000);
         }
 
+        // the alien blaster: its cell pops out by itself as the cover opens (as pulling it by hand)
+        if (cellCover && g_settings.cellPopsOut && b.open && b.t >= 0.6f && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
+            now - b.opened > std::chrono::milliseconds(200)) {
+            note("The cell popped out as the cover opened: %u rounds back to the pouch", b.live);
+            ejectCasings(gun, root, cellNode->world.translate, (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
+            b.live = 0;
+            b.spent = 0;
+            playSound(4);
+            buzz(g_settings.gunHand, 1200);
+        }
+
         // muzzle up: everything falls out (not from a break action: its rounds stay in)
         // (held up for a moment and fairly still: a jerk to shut it does not throw them out on the way)
         const bool muzzleUp = barrel.z > (revolver ? 0.5f : 0.3f) && dot(b.velocity, b.velocity) < 90.0f * 90.0f * scale * scale;

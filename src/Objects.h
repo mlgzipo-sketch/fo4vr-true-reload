@@ -113,6 +113,8 @@ namespace mrf
     // with a vanilla collision, unseen, wearing that model. Empty when the model has its own collision.
     extern std::string g_genericVisual;
     extern std::string g_genericFormModel;   // the model of the gun's magazine (another mod's)
+    // a vanilla magazine kind (0..29) whose model has no collision: that model (worn on a carrier); empty if it has its own
+    const std::string& vanillaCarrierVisual(int kind) noexcept;
     // puts the magazine model on carriers that lack it (just made, or their 3D made again)
     void dressCarriers() noexcept;
 

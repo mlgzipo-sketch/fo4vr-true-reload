@@ -146,6 +146,7 @@ namespace mrf
         RE::NiTransform    wristInBolt{};                  // the drawn hand against the slide while it is racked
         bool               rackPinned{ false };
         float              topAt{ 7.0f };                  // from the node's origin (the bottom) up to the top
+        RE::NiPoint3       carrierAt{};                    // a vanilla magazine worn on a carrier: the model's middle in its own frame
         RE::NiTransform    looseInNode{};                  // a loose magazine model against the gun's magazine node
         // the magazine
         int                place{ kSeated };

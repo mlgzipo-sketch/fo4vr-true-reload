@@ -105,6 +105,8 @@ namespace mrf
         float roundRotZ{ 0.0f };
         float roundScale{ 1.0f };
         bool  carrierMags{ true };
+        bool  carrierVanilla{ true };    // 1 = a vanilla magazine whose model has no collision (it hangs in the air) is a carrier wearing it, as other mods' are
+        bool  cellPopsOut{ true };       // 1 = the alien blaster's cell pops out by itself as the cover opens
         bool  magSlots{ false };         // 1 = magazines of other mods on slot forms and saved holds given to ROCK (0.75 test; off = as 0.74)
         bool  keepHold{ false };         // a magazine ROCK holds is kept at the gun's saved hold (stick click)      // a magazine model with no collision is worn by an unseen vanilla magazine
         bool  pinchHandle{ true };      // a rifle's charging handle / bolt knob is taken with thumb and index, not the fist

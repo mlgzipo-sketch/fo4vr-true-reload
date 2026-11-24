@@ -376,6 +376,37 @@ namespace mrf
         }
     }
 
+    const std::string& vanillaCarrierVisual(int kind) noexcept
+    {
+        static std::array<std::string, 30> visual;
+        static std::array<bool, 30> checked{};
+        static const std::string none;
+        if (!g_settings.carrierMags || !g_settings.carrierVanilla || kind < 0 || kind >= 30 || kind == kMinigunKind) {
+            return none;
+        }
+        const auto k = static_cast<std::size_t>(kind);
+        if (!checked[k]) {
+            checked[k] = true;
+            const RE::TESFormID id = kind < 2 ? 0x800 + kind : (kind <= 18 ? 0x80F + (kind - 2) : 0x820 + (kind - 19));
+            auto* data = RE::TESDataHandler::GetSingleton();
+            auto* form = data ? data->LookupForm(id, "ManualReloadF.esp") : nullptr;
+            auto* misc = form ? form->As<RE::TESObjectMISC>() : nullptr;
+            const char* path = misc ? static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).GetModel() : nullptr;
+            if (path && *path) {
+                static std::array<std::string, 30> kept;   // SetModel keeps the pointer's text
+                kept[k] = path;
+                auto loaded = loadModel(kept[k]);
+                if (loaded && !hasCollision(loaded.get())) {
+                    visual[k] = kept[k];
+                    static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*misc)).SetModel(kCarrierModel);
+                }
+                note("Magazine: the vanilla magazine of kind %d is '%s'%s", kind, kept[k].c_str(),
+                    visual[k].empty() ? " (it has its own collision)" : " (no collision in it: a real one is a carrier wearing it)");
+            }
+        }
+        return visual[k];
+    }
+
     bool prepareGenericMagModel(const std::string& model) noexcept
     {
         auto* data = RE::TESDataHandler::GetSingleton();
@@ -423,6 +454,9 @@ namespace mrf
         if (g_state.kind == kGenericKind && !g_genericVisual.empty()) {
             g_pending[token].visual = g_genericVisual;
             g_pending[token].visualAt = g_state.looseInNode.translate;   // the carrier's root is the model's middle
+        } else if (g_state.kind != kGenericKind && !vanillaCarrierVisual(g_state.kind).empty()) {
+            g_pending[token].visual = vanillaCarrierVisual(g_state.kind);
+            g_pending[token].visualAt = g_state.carrierAt;   // Rail put the carrier's root at the model's middle
         }
         PendingCommand command;
         command.type = kSpawn;

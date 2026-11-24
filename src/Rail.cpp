@@ -163,6 +163,15 @@ namespace mrf
                 }
             }
         }
+        // a vanilla magazine whose model has no collision (the Thompson's drums): worn on a carrier whose root is the model's middle
+        st.carrierAt = RE::NiPoint3{};
+        if (st.kind >= 0 && st.kind < 30 && !vanillaCarrierVisual(st.kind).empty()) {
+            st.carrierAt = kLooseMiddle[static_cast<std::size_t>(st.kind)];
+            st.looseInNode = compose(st.looseInNode, pointTransform(st.carrierAt));
+            if (!st.railLogged) {
+                note("Rail: the vanilla magazine is worn on a carrier, whose middle is (%.2f, %.2f, %.2f) of the model", st.carrierAt.x, st.carrierAt.y, st.carrierAt.z);
+            }
+        }
         st.railKnown = true;
         if (!st.railLogged) {
             st.railLogged = true;
