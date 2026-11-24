@@ -53,6 +53,8 @@ namespace mrf
     bool prepareCasingModel(const Gun& gun) noexcept;
 
     // `count` cases (or unfired rounds) out of the gun at `at`, thrown along `way` (world), a little apart
+    // set around an ejectCasings call: the ammo's own model is thrown instead of its case (the alien blaster's cell)
+    extern bool g_throwAmmoItself;
     void ejectCasings(const Gun& gun, const RE::NiAVObject* root, const RE::NiPoint3& at, const RE::NiPoint3& way, std::uint32_t count, const char* why) noexcept;
     void ejectCasingsFrom(const Gun& gun, const RE::NiAVObject* root, const std::vector<RE::NiPoint3>& at, const RE::NiPoint3& way, bool straight, const char* why) noexcept;
 

@@ -119,13 +119,18 @@ namespace mrf
 
     bool g_casingModelReady{ false };
 
+    bool g_throwAmmoItself{ false };
+
+    bool g_casingModelIsAmmo{ false };
+
     bool prepareCasingModel(const Gun& gun) noexcept
     {
         auto* ammo = gun.instance && readable(gun.instance, sizeof(RE::TESObjectWEAP::InstanceData)) ? gun.instance->ammo : nullptr;
-        if (g_casingModelFor == ammo) {
+        if (g_casingModelFor == ammo && g_casingModelIsAmmo == g_throwAmmoItself) {
             return g_casingModelReady;
         }
         g_casingModelFor = ammo;
+        g_casingModelIsAmmo = g_throwAmmoItself;
         g_casingModelReady = false;
         auto* data = RE::TESDataHandler::GetSingleton();
         auto* form = data ? data->LookupForm(kCasingForm, "ManualReloadF.esp") : nullptr;
@@ -134,6 +139,9 @@ namespace mrf
             return false;
         }
         const char* m = ammo->shellCasing.GetModel();
+        if (g_throwAmmoItself) {   // the alien blaster's cell: the ammo's own model is thrown out, it has no case
+            m = static_cast<RE::TESModel&>(static_cast<RE::BGSModelMaterialSwap&>(*ammo)).GetModel();
+        }
         if (!m || !*m) {
             note("Casing: ammo %08X has no case model: nothing is thrown out", ammo->GetFormID());
             return false;

@@ -841,7 +841,9 @@ namespace mrf
         if (cellCover && g_settings.cellPopsOut && b.open && b.t >= 0.6f && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
             now - b.opened > std::chrono::milliseconds(200)) {
             note("The cell popped out as the cover opened: %u rounds back to the pouch", b.live);
-            ejectCasings(gun, root, cellNode->world.translate, (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
+            g_throwAmmoItself = true;
+                ejectCasings(gun, root, cellNode->world.translate, (axisOf(root->world, 2) * 0.6f + axisOf(root->world, 1) * -0.4f), 1, "the alien blaster's cell");
+                g_throwAmmoItself = false;
             b.live = 0;
             b.spent = 0;
             playSound(4);
@@ -906,7 +908,9 @@ namespace mrf
             } else if (cellCover && !atBelt && b.held == 0 && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
                        distance(spare.palm, cellNode->world.translate) < 8.0f * scale) {
                 note("The cell is pulled out by hand: %u rounds back to the pouch", b.live);
+                g_throwAmmoItself = true;
                 ejectCasings(gun, root, cellNode->world.translate, axisOf(root->world, 2) * -1.0f, 1, "the alien blaster's cell");
+                g_throwAmmoItself = false;
                 b.live = 0;
                 b.spent = 0;
                 playSound(4);
