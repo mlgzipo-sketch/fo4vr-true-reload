@@ -270,7 +270,7 @@ namespace mrf
             return mid + st.axis * (along * 0.25f);
         }
         const auto& r = st.magRest;
-        const float z = st.cellFed ? (st.topAt + st.bottomAt) * 0.5f : st.bottomAt + (st.topAt - st.bottomAt) * 0.25f;
+        const float z = st.cellMidKnown ? st.cellMid : st.cellFed ? (st.topAt + st.bottomAt) * 0.5f : st.bottomAt + (st.topAt - st.bottomAt) * 0.25f;
         return r.translate + (axisOf(r, 0) * st.sideInNode.x + axisOf(r, 1) * st.sideInNode.y + axisOf(r, 2) * z) * r.scale;
     }
 

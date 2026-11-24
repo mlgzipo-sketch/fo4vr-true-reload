@@ -78,8 +78,8 @@ namespace mrf
     RE::NiPoint3 grabPoint(const RE::NiAVObject* root) noexcept
     {
         const auto pose = railPose(root, g_state.s);
-        return pose.translate + (axisOf(pose, 0) * g_state.sideInNode.x + axisOf(pose, 1) * g_state.sideInNode.y +
-                                 axisOf(pose, 2) * (g_state.bottomAt + g_settings.grabUp)) * pose.scale;
+        const float z = g_state.cellMidKnown ? g_state.cellMid : g_state.bottomAt + g_settings.grabUp;
+        return pose.translate + (axisOf(pose, 0) * g_state.sideInNode.x + axisOf(pose, 1) * g_state.sideInNode.y + axisOf(pose, 2) * z) * pose.scale;
     }
 
     RE::NiPoint3 tiltAxis(float degrees) noexcept
@@ -213,6 +213,16 @@ namespace mrf
             }
             const RE::NiPoint3 middle{ (lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f };
             const float half[3]{ (hi[0] - lo[0]) * 0.5f, (hi[1] - lo[1]) * 0.5f, (hi[2] - lo[2]) * 0.5f };
+            if (st.cellFed) {
+                // a cell lies across its node's way (the laser rifle's): the hand takes its middle as ROCK measured it, not
+                // the 10mm's guessed sizes along the node (those put the hand a cell's length off)
+                const float scale = st.magRest.scale > 0.0f ? st.magRest.scale : 1.0f;
+                const auto off = middle - st.magRest.translate;
+                st.cellMid = dot(axisOf(st.magRest, 2), off) / scale;
+                st.cellMidKnown = true;
+                st.sideInNode = { dot(axisOf(st.magRest, 0), off) / scale, dot(axisOf(st.magRest, 1), off) / scale, 0.0f };
+                note("Rail: the cell's middle is %.2f along its node, (%.2f, %.2f) off it: the hand takes it there", st.cellMid, st.sideInNode.x, st.sideInNode.y);
+            }
             if (st.kind == kGenericKind && g_settings.magTilt < 0.0f && half[2] > 2.0f) {
                 // a gun of another mod built on another gun's nodes: its magazine node leans like that gun's (the DOOM nailgun's
                 // 26 deg, from the 10mm) while its own magazine stands straight. A magazine leaning t is at least
@@ -256,6 +266,12 @@ namespace mrf
                     st.length = g_settings.railLength > 0.0f ? g_settings.railLength : std::min(2.0f * halfLength, top + 1.2f + std::max(0.0f, -out));
                     note("  the top and the travel follow the box: top %.2f, travel %.2f", st.topAt, st.length);
                 }
+            }
+            if (st.cellMidKnown) {
+                // the cell's own middle, off the node's line (worked out above; the stick magazine's line does not apply)
+                const float scale = st.magRest.scale > 0.0f ? st.magRest.scale : 1.0f;
+                const auto off = middle - st.magRest.translate;
+                st.sideInNode = { dot(axisOf(st.magRest, 0), off) / scale, dot(axisOf(st.magRest, 1), off) / scale, 0.0f };
             }
         }
         // a gun of another mod: the slide is everything that hangs on the node the recording moves (the DOOM nailgun's

@@ -988,7 +988,7 @@ namespace
             link.magazine.grab = magOut && st.railKnown;
             link.magazine.point[0] = st.sideInNode.x;
             link.magazine.point[1] = st.sideInNode.y;
-            link.magazine.point[2] = st.bottomAt + g_settings.grabUp;
+            link.magazine.point[2] = st.cellMidKnown ? st.cellMid : st.bottomAt + g_settings.grabUp;
             link.magazine.radius = g_settings.magGrabRadius;
             if (magOut && looksLikeObject(magazine->parent)) {
                 // ROCK uses this pose a frame later, against the gun as it stands then: with a magazine carried in the

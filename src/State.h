@@ -123,6 +123,8 @@ namespace mrf
         bool               chamber{ false };
         bool               hasBolt{ true };               // the model has a WeaponBolt node
         bool               cellFed{ false };
+        bool               cellMidKnown{ false };   // a cell / core: its middle along the magazine node's Z, from ROCK's box
+        float              cellMid{ 0.0f };
         bool               hasZonesFile{ false };         // drawn in Blender: no recording of the game's reload is needed              // an energy gun: the cell feeds it, nothing to rack
         int                kind{ 0 };
         bool               dumped{ false };

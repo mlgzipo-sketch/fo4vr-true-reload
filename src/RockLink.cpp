@@ -241,7 +241,8 @@ namespace rocklink
             g_bodied.clear();
             for (std::uint32_t i = 0; i < count && i < parts::kMaxEvidenceDetails; ++i) {
                 const auto& d = details[i];
-                const int which = d.partKind == 7 ? 0 : ((d.partKind >= 9 && d.partKind <= 11) ? 1 : -1);
+                // a laser gun's cell (17) is its magazine: without it the cell's size was the 10mm's guess, the hand a cell's length off
+                const int which = (d.partKind == 7 || d.partKind == 17) ? 0 : ((d.partKind >= 9 && d.partKind <= 11) ? 1 : -1);
                 if (which >= 0 && d.localBoundsGame.valid) {
                     const auto& b = d.localBoundsGame;
                     const float volume = (b.max.x - b.min.x) * (b.max.y - b.min.y) * (b.max.z - b.min.z);
