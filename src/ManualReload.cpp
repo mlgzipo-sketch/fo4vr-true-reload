@@ -88,7 +88,9 @@ namespace
         throwCasings(Clock::now());
         tidyLooseRounds(Clock::now());
         dressCarriers();
-        giveSlotHolds(freeIndex());
+        if (g_settings.magSlots) {
+            giveSlotHolds(freeIndex());
+        }
         readHand(0);
         readHand(1);
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
@@ -1051,7 +1053,7 @@ namespace
                                  (free.previousButtons & buttonMask(g_settings.markButton)) == 0;
             if (markNow && saveHold(gun)) {
                 std::string said = "Magazine grip saved: magazines from the belt will come like this";
-                if (st.kind == kGenericKind) {
+                if (st.kind == kGenericKind && g_settings.magSlots) {
                     // a magazine of another mod: ROCK takes this hold for its kind of magazine, or for it alone
                     saveSlotHold(st.magModel, rocklink::heldBy(freeIndex()), freeIndex(), said);
                 }

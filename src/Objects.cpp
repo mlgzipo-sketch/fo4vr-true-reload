@@ -427,7 +427,7 @@ namespace mrf
         PendingCommand command;
         command.type = kSpawn;
         command.kind = g_state.kind;
-        if (g_state.kind == kGenericKind) {
+        if (g_state.kind == kGenericKind && g_settings.magSlots) {
             command.kind = magSlotKind(g_state.magModel, g_genericVisual.empty() ? g_genericFormModel.c_str() : kCarrierModel, !g_genericVisual.empty());   // a form of its own kind / its own
         }
         command.token = token;
