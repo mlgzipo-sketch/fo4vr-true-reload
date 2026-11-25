@@ -372,22 +372,37 @@ namespace mrf
         const bool cellCover = b.mech == 4;   // alien blaster: one cell is all its rounds
         const bool capacitors = b.mech == 5;  // gamma gun: three capacitors, then it is loaded
         auto* cellNode = cellCover ? findNamed(root, b.slideOpens ? "WeaponExtra1" : kMovingParts[0]) : nullptr;   // the harpoon gun: the harpoon
-        // the Tesla rifle's handle turns as its recording shows (the alien blaster's cover only by its zones file)
-        const bool played = (!cellCover || b.handleOpens) && !b.slideOpens && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
-        // the harpoon gun's frame: along the recorded way of WeaponBolt (forward), not turned about a hinge
-        const bool slid = b.slideOpens && gun.weapon && (loadPlayed(gun.weapon->GetFormID()), g_play.weapon == gun.weapon->GetFormID()) &&
+        // a handle that opens it (the Tesla rifle's handle turned down, the harpoon gun's frame pushed forward): moved along
+        // the way its node (WeaponBolt) takes in the recording, by the point of it the hand took; nothing else is posed
+        const bool played = !cellCover && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
+        const bool slid = b.handleOpens && gun.weapon && (loadPlayed(gun.weapon->GetFormID()), g_play.weapon == gun.weapon->GetFormID()) &&
                           g_play.boltKnown;
-        const auto slideSpan = [&]() {
-            const auto d = boltAt(1.0f).translate - boltAt(0.0f).translate;
-            return std::max(std::sqrt(dot(d, d)), 1.0f);
-        };
-        // how far along the frame's way a point is (0 home .. 1 all the way forward), for moving it by hand
+        // where along that way (0 home .. 1 open) the point the hand took is nearest to the hand now
         const auto slideCoord = [&](const RE::NiPoint3& world) {
-            const auto from = boltAt(0.0f).translate;
-            const auto d = boltAt(1.0f).translate - from;
-            const float span = slideSpan();
             const auto at = relative(root->world, pointTransform(world)).translate;
-            return dot(at - from, d) / (span * span);
+            const auto pointAt = [&](float u) { return compose(boltAt(u), pointTransform(b.gripInPart)).translate; };
+            float best = 0.0f, bestD = 1e30f;
+            for (int i = 0; i <= 48; ++i) {
+                const float u = i / 48.0f;
+                const auto d = pointAt(u) - at;
+                const float dd = dot(d, d);
+                if (dd < bestD) {
+                    bestD = dd;
+                    best = u;
+                }
+            }
+            for (float step = 1.0f / 96.0f; step > 0.002f; step *= 0.5f) {
+                for (const float u : { best - step, best + step }) {
+                    if (u < 0.0f || u > 1.0f) continue;
+                    const auto d = pointAt(u) - at;
+                    const float dd = dot(d, d);
+                    if (dd < bestD) {
+                        bestD = dd;
+                        best = u;
+                    }
+                }
+            }
+            return best;
         };
         const bool zoneHinge = !played && st.zoneHinge.arc;   // no recording: the turn drawn in Blender
         if (zoneHinge) {
@@ -649,9 +664,7 @@ namespace mrf
             if (slid && b.t > 0.0f) {
                 // the frame along its recorded way, from where it stands closed
                 const float eased = b.driving ? b.t : b.t * b.t * (3.0f - 2.0f * b.t);
-                auto posed = b.restInRoot;
-                posed.translate += boltAt(eased).translate - boltAt(0.0f).translate;
-                mag->local = relative(mag->parent->world, compose(root->world, posed));
+                mag->local = relative(mag->parent->world, compose(root->world, boltAt(eased)));
                 refreshSubtree(mag, RE::NiPoint3{});
             } else if (played) {
                 const float eased = (b.driving || swinging) ? b.t : b.t * b.t * (3.0f - 2.0f * b.t);
@@ -917,6 +930,7 @@ namespace mrf
         const float toGun = spare.valid ? distance(spare.palm, breechAt) : 1e9f;
         if (press && griphook::owned() && !b.open && hinged && unlatched && b.held == 0 && touchesPart(14.0f)) {
             b.driving = true;   // the closed gun taken by its opening part: turning it opens the gun
+            b.gripInPart = relative(mag->world, pointTransform(spare.palm)).translate;
             b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
             b.driveT0 = 0.0f;
             buzz(freeIndex(), 600);
@@ -959,6 +973,7 @@ namespace mrf
                 buzz(freeIndex(), 1200);
             } else if (hinged && !atBelt && b.held == 0 && touchesPart(14.0f)) {
                 b.driving = true;
+                b.gripInPart = relative(mag->world, pointTransform(spare.palm)).translate;
                 b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
                 b.driveT0 = b.t;
                 buzz(freeIndex(), 800);
@@ -1325,7 +1340,7 @@ namespace mrf
         // an open gun: the free hand's grip near it or at the belt is this plugin's (no second-hand hold, no ROCK grab)
         if (!spare.grip) {
             const bool mine = spare.valid && ((b.open && (atBelt || distance(spare.palm, root->world.translate) < g_settings.gunRadius)) ||
-                                              (!b.open && hinged && unlatched && touchesPart(0.0f)) ||   // closed: only on the opening part, unlatched
+                                              (!b.open && hinged && unlatched && touchesPart(b.handleOpens ? 14.0f : 0.0f)) ||   // closed: only on the opening part, unlatched
                                               leverTouch);
             st.armReason = mine ? (atBelt ? kArmBelt : kArmBlock) : kArmNone;
             griphook::setArmed(mine);

@@ -68,6 +68,8 @@ namespace rocklink
     bool connect(LogFn log, bool enabled) noexcept;
     bool connected() noexcept;
     Result frame(const Frame& frame) noexcept;
+    // false: whatever a frame asks, the free hand may take nothing of the gun (bTriggerGrab while the real grip is pressed)
+    void setTakeAllowed(bool allowed) noexcept;
     // The box of the drawn gun's magazine (0) or slide / bolt (1) as ROCK measured it, in the gun root's frame.
     bool partBox(int which, float lo[3], float hi[3]) noexcept;
     // The middle of the bolt's handle where it sticks out of one side of the gun (the gun root's frame); false for a slide.

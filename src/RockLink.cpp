@@ -511,8 +511,21 @@ namespace rocklink
 
     bool connected() noexcept { return g_weapon && g_parts; }
 
-    Result frame(const Frame& f) noexcept
+    namespace
     {
+        bool g_takeAllowed{ true };
+    }
+    void setTakeAllowed(bool allowed) noexcept { g_takeAllowed = allowed; }
+
+    Result frame(const Frame& given) noexcept
+    {
+        Frame f = given;
+        if (!g_takeAllowed) {
+            // bTriggerGrab: the grip only holds the gun; the magazine and the slide are ROCK's to take only by the trigger
+            f.magazine.grab = false;
+            f.bolt.grab = false;
+            f.keepTargets = false;
+        }
         Result result{};
         if (!connected()) {
             return result;

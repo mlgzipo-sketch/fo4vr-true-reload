@@ -122,8 +122,14 @@ namespace
         updateJolt();
         if (g_settings.triggerGrab) {
             updateTriggerZone(player);
+            // the real grip only holds the gun: the magazine and the slide are given to ROCK to take only by the trigger
+            // (pressed, or the finger on it with the grip open: ROCK sees the press as the grip in the same frame)
+            const auto& free = g_hands[freeIndex()];
+            const bool realGrip = (free.buttons & vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.gripButton))) != 0;
+            rocklink::setTakeAllowed(griphook::triggerLatched() || (!realGrip && free.axes[1].x > 0.05f));
         } else {
             griphook::setTriggerZone(false);
+            rocklink::setTakeAllowed(true);
         }
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
         if (g_beltRound.asked && !(g_state.weapon && g_state.weapon->GetFormID() == g_beltRound.weapon && g_state.breech.held > 0)) {
@@ -274,6 +280,10 @@ namespace
                         st.breech.mech == 1 ? "a revolver (the cylinder swings out)" : st.breech.mech == 2 ? "a break action" :
                         st.breech.mech == 4 ? (st.breech.slideOpens ? "a frame pushed forward and a harpoon" : "a cover and a cell") : st.breech.mech == 5 ? "three capacitors" : "one big round at the breech");
                 } else {
+                    if (st.breech.handleOpens) {
+                        note("This gun was to open by its %s, but its node is not in the drawn model: left to the game",
+                            st.breech.slideOpens ? "frame (WeaponBolt)" : "handle");
+                    }
                     st.breech.mech = 0;
                 }
             }

@@ -79,6 +79,8 @@ namespace mrf
         s.gunHand = s.gunHand != 0 ? 1 : 0;
         note("Settings: bBlockReload=%d bHideGrip=%d iGunHand=%d hold %.2fs belt %.0f..%.0f r%.0f tilt %.1f rail %.1f",
             s.blockReload ? 1 : 0, s.hideGrip ? 1 : 0, s.gunHand, s.holdSeconds, s.beltLow, s.beltHigh, s.beltRadius, s.magTilt, s.railLength);
+        note("Settings: bTriggerGrab=%d bTeslaHandle=%d bHarpoonFrame=%d bLeverAction=%d bWesternRevolver=%d bSlideJolt=%d",
+            s.triggerGrab ? 1 : 0, s.teslaHandle ? 1 : 0, s.harpoonFrame ? 1 : 0, s.leverAction ? 1 : 0, s.westernRevolver ? 1 : 0, s.slideJolt ? 1 : 0);
     }
 
     // The ini changed on disk (a value tuned while the game runs): read it again. Checked every two seconds.
