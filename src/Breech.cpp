@@ -361,6 +361,15 @@ namespace mrf
             link.magazine.drive = true;   // ROCK's collision of the opening part goes where it is drawn
             link.magazine.parentLocal = toLinkPose(b.drawnLocal);
         }
+        if (b.handleOpens && b.handleInPartKnown) {
+            // the handle is ROCK's to take (a real hold on the gun's part, as a slide): the plugin moves the part, the hand goes with it
+            link.magazine.grab = true;
+            link.magazine.point[0] = b.handleInPart.x;
+            link.magazine.point[1] = b.handleInPart.y;
+            link.magazine.point[2] = b.handleInPart.z;
+            link.magazine.radius = 12.0f;
+            link.bolt.node = nullptr;
+        }
         g_rock = rocklink::frame(link);
 
         auto* mag = findNamed(root, partName);
@@ -451,6 +460,11 @@ namespace mrf
                 return true;
             });
             b.known = true;
+            if (b.handleOpens) {
+                const auto middle = mag->worldBound.fRadius > 0.5f ? mag->worldBound.center : mag->world.translate;
+                b.handleInPart = relative(mag->world, pointTransform(middle)).translate;
+                b.handleInPartKnown = true;
+            }
             b.restInRoot = relative(root->world, mag->world);
             if (looksLikeObject(cellNode)) {
                 b.cellRest = cellNode->local;
@@ -992,8 +1006,24 @@ namespace mrf
                 close("the free hand");
             }
         }
+        // ROCK took the handle: the controller (not the drawn hand, which ROCK keeps on the part) moves it along its way
+        if (slid && g_rock.onMagazine && !b.rockHeld && spare.valid) {
+            b.rockHeld = true;
+            g_palmFromController = true;
+            b.driving = true;
+            b.gripInPart = relative(mag->world, pointTransform(spare.palm)).translate;
+            b.driveAngle0 = slideCoord(spare.palm);
+            b.driveT0 = b.t;
+            buzz(freeIndex(), 800);
+            note("ROCK holds the %s: it is moved by the hand (%.2f open)", b.slideOpens ? "frame" : "handle", b.t);
+        }
         if (b.driving) {
-            if (!(spare.valid && spare.grip)) {
+            if (b.rockHeld ? !g_rock.onMagazine : !(spare.valid && spare.grip)) {
+                if (b.rockHeld) {
+                    note("ROCK let the %s go at %.2f open", b.slideOpens ? "frame" : "handle", b.t);
+                }
+                b.rockHeld = false;
+                g_palmFromController = false;
                 b.driving = false;
                 if (b.open && b.t < 0.3f) {
                     close("pushed shut by hand");
@@ -1024,7 +1054,7 @@ namespace mrf
             }
         }
         // a handle moved by hand: the hand is kept on it where it took it (the handle does not slip out of the hand)
-        if (slid && b.driving && spare.valid) {
+        if (slid && b.driving && !b.rockHeld && spare.valid) {
             pinHand(handOnPart(spare.wrist, mag->world, b.gripInPart, b.palmInWrist));
             poseFingers(true);
             b.handPinned = true;
@@ -1359,8 +1389,12 @@ namespace mrf
 
         // an open gun: the free hand's grip near it or at the belt is this plugin's (no second-hand hold, no ROCK grab)
         if (!spare.grip) {
-            const bool mine = spare.valid && ((b.open && (atBelt || distance(spare.palm, root->world.translate) < g_settings.gunRadius)) ||
-                                              (!b.open && hinged && unlatched && touchesPart(b.handleOpens ? 14.0f : 0.0f)) ||   // closed: only on the opening part, unlatched
+            // a handle ROCK takes (the Tesla rifle, the harpoon gun) is left to it: the press is not the plugin's there
+            const bool onHandle = b.handleOpens && b.handleInPartKnown && b.held == 0 &&
+                                  distance(spare.palm, compose(mag->world, pointTransform(b.handleInPart)).translate) < 10.0f * scale &&
+                                  !(looksLikeObject(cellNode) && distance(spare.palm, cellAt()) < 8.0f * scale);
+            const bool mine = spare.valid && !onHandle && ((b.open && (atBelt || distance(spare.palm, root->world.translate) < g_settings.gunRadius)) ||
+                                              (!b.open && hinged && unlatched && !b.handleOpens && touchesPart(0.0f)) ||   // closed: only on the opening part, unlatched
                                               leverTouch);
             st.armReason = mine ? (atBelt ? kArmBelt : kArmBlock) : kArmNone;
             griphook::setArmed(mine);

@@ -44,6 +44,7 @@ namespace mrf
     std::array<Hand, 2> g_hands;
 
     bool g_pinned{ false };
+    bool g_palmFromController{ false };
 
     int freeIndex() noexcept { return 1 - g_settings.gunHand; }
     FRIKApiV2::Hand frikHand(int index) noexcept { return index == 0 ? FRIKApiV2::Hand::Right : FRIKApiV2::Hand::Left; }
@@ -108,7 +109,7 @@ namespace mrf
         // grab that follows the palm then chases itself (the crank spinning, the gauss bolt
         // shaking).  So while pinned, the palm and the wrist come from the controller, offset as
         // they were the last time the hand was free.
-        const bool pinnedHere = g_pinned && index == freeIndex();
+        const bool pinnedHere = (g_pinned || g_palmFromController) && index == freeIndex();   // ..or ROCK holds it on a part
         if (pinnedHere && hand.inWandKnown) {
             hand.wrist = compose(hand.wand, hand.wristInWand);
             hand.palm = compose(hand.wand, pointTransform(hand.palmInWand)).translate;

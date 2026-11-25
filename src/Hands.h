@@ -37,6 +37,7 @@ namespace mrf
     extern std::array<Hand, 2> g_hands;
 
     extern bool g_pinned;
+    extern bool g_palmFromController;   // ROCK holds the free hand on a part of the gun: its palm is read from the controller
 
     int freeIndex() noexcept;
     FRIKApiV2::Hand frikHand(int index) noexcept;

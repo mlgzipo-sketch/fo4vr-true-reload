@@ -155,6 +155,7 @@ namespace
         const auto gun = equippedGun(player);
         animhook::install(player);
         if (gun.weapon != st.weapon) {
+            g_palmFromController = false;   // ROCK held the last gun's handle
             releaseHand();
             griphook::setArmed(false);
             st = State{};
@@ -300,6 +301,7 @@ namespace
             return;
         }
         if (!st.managed || !looksLikeObject(root)) {
+            g_palmFromController = false;
             if (st.managed && !st.dumped && now - st.equippedAt > std::chrono::seconds(2)) {
                 st.dumped = true;   // why nothing happens: the drawn gun has no WeaponMagazine node where it is looked for
                 auto* fp = player->firstPerson3D.get();
