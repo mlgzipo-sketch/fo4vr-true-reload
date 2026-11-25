@@ -19,6 +19,7 @@
 #include "Runtime.h"
 #include "Frame.h"
 #include "Angles.h"
+#include "AnimHook.h"
 #include "Editor.h"
 #include "GripHook.h"
 #include "Gun.h"
@@ -370,16 +371,31 @@ namespace mrf
         const bool single = b.mech == 3;   // a mini nuke / a missile: nothing is left in it after the shot
         const bool cellCover = b.mech == 4;   // alien blaster: one cell is all its rounds
         const bool capacitors = b.mech == 5;  // gamma gun: three capacitors, then it is loaded
-        auto* cellNode = cellCover ? findNamed(root, kMovingParts[0]) : nullptr;
+        auto* cellNode = cellCover ? findNamed(root, b.slideOpens ? "WeaponExtra1" : kMovingParts[0]) : nullptr;   // the harpoon gun: the harpoon
         // the Tesla rifle's handle turns as its recording shows (the alien blaster's cover only by its zones file)
-        const bool played = (!cellCover || b.handleOpens) && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
+        const bool played = (!cellCover || b.handleOpens) && !b.slideOpens && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
+        // the harpoon gun's frame: along the recorded way of WeaponBolt (forward), not turned about a hinge
+        const bool slid = b.slideOpens && gun.weapon && (loadPlayed(gun.weapon->GetFormID()), g_play.weapon == gun.weapon->GetFormID()) &&
+                          g_play.boltKnown;
+        const auto slideSpan = [&]() {
+            const auto d = boltAt(1.0f).translate - boltAt(0.0f).translate;
+            return std::max(std::sqrt(dot(d, d)), 1.0f);
+        };
+        // how far along the frame's way a point is (0 home .. 1 all the way forward), for moving it by hand
+        const auto slideCoord = [&](const RE::NiPoint3& world) {
+            const auto from = boltAt(0.0f).translate;
+            const auto d = boltAt(1.0f).translate - from;
+            const float span = slideSpan();
+            const auto at = relative(root->world, pointTransform(world)).translate;
+            return dot(at - from, d) / (span * span);
+        };
         const bool zoneHinge = !played && st.zoneHinge.arc;   // no recording: the turn drawn in Blender
         if (zoneHinge) {
             g_play.axis = st.zoneHinge.axis;
             g_play.pivot = st.zoneHinge.pivot;
             g_play.openAngle = st.zoneHinge.angle;
         }
-        const bool hinged = played || zoneHinge;
+        const bool hinged = played || zoneHinge || slid;
         std::array<RE::NiAVObject*, 5> child{};
         for (int i = 0; i < 5; ++i) {
             char name[32]{};
@@ -442,7 +458,8 @@ namespace mrf
                 const auto at = cellNode->worldBound.fRadius > 0.5f ? cellNode->worldBound.center : cellNode->world.translate;
                 st.breechMouth = relative(root->world, pointTransform(at)).translate;
                 st.breechReach = 8.0f;
-                note("Tesla: the cell goes in at (%.1f, %.1f, %.1f); the handle (WeaponBolt) opens it", st.breechMouth.x, st.breechMouth.y, st.breechMouth.z);
+                note("%s goes in at (%.1f, %.1f, %.1f); %s (WeaponBolt) opens it", b.slideOpens ? "Harpoon gun: the harpoon" : "Tesla: the cell",
+                    st.breechMouth.x, st.breechMouth.y, st.breechMouth.z, b.slideOpens ? "the frame pushed forward" : "the handle turned");
             }
             b.live = gun.data->ammoCount;
             b.lastAmmo = b.live;
@@ -488,7 +505,7 @@ namespace mrf
                 gun.data->ammoCount = ammo;
                 gameReloaded = true;
             } else if (ammo < b.lastAmmo) {
-                b.spent = single || capacitors ? 0u : cellCover ? (ammo == 0 ? 1u : 0u) : std::min(b.spent + (b.lastAmmo - ammo), capacity - std::min(ammo, capacity));
+                b.spent = single || capacitors ? 0u : cellCover ? (ammo == 0 && !b.slideOpens ? 1u : 0u) : std::min(b.spent + (b.lastAmmo - ammo), capacity - std::min(ammo, capacity));
                 detail("Shot: %u rounds and %u fired cases in the gun", ammo, b.spent);
             }
             b.live = ammo;
@@ -629,7 +646,14 @@ namespace mrf
                 }
             }
             refreshSubtree(mag, RE::NiPoint3{});
-            if (played) {
+            if (slid && b.t > 0.0f) {
+                // the frame along its recorded way, from where it stands closed
+                const float eased = b.driving ? b.t : b.t * b.t * (3.0f - 2.0f * b.t);
+                auto posed = b.restInRoot;
+                posed.translate += boltAt(eased).translate - boltAt(0.0f).translate;
+                mag->local = relative(mag->parent->world, compose(root->world, posed));
+                refreshSubtree(mag, RE::NiPoint3{});
+            } else if (played) {
                 const float eased = (b.driving || swinging) ? b.t : b.t * b.t * (3.0f - 2.0f * b.t);
                 posePlayed(root, eased);
             } else if (zoneHinge && b.t > 0.0f) {
@@ -893,7 +917,7 @@ namespace mrf
         const float toGun = spare.valid ? distance(spare.palm, breechAt) : 1e9f;
         if (press && griphook::owned() && !b.open && hinged && unlatched && b.held == 0 && touchesPart(14.0f)) {
             b.driving = true;   // the closed gun taken by its opening part: turning it opens the gun
-            b.driveAngle0 = hingeAngle(root, spare.palm);
+            b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
             b.driveT0 = 0.0f;
             buzz(freeIndex(), 600);
             detail("The free hand takes the closed opening part");
@@ -935,7 +959,7 @@ namespace mrf
                 buzz(freeIndex(), 1200);
             } else if (hinged && !atBelt && b.held == 0 && touchesPart(14.0f)) {
                 b.driving = true;
-                b.driveAngle0 = hingeAngle(root, spare.palm);
+                b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
                 b.driveT0 = b.t;
                 buzz(freeIndex(), 800);
                 detail("The free hand takes the opening part at %.2f open", b.t);
@@ -950,11 +974,13 @@ namespace mrf
                     close("pushed shut by hand");
                 }
             } else {
-                float turn = hingeAngle(root, spare.palm) - b.driveAngle0;
-                while (turn > 3.14159265f) turn -= 6.2831853f;
-                while (turn < -3.14159265f) turn += 6.2831853f;
+                float turn = (slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm)) - b.driveAngle0;
+                if (!slid) {
+                    while (turn > 3.14159265f) turn -= 6.2831853f;
+                    while (turn < -3.14159265f) turn += 6.2831853f;
+                }
                 const float before = b.t;
-                b.t = std::clamp(b.driveT0 + turn / std::max(g_play.openAngle, 0.1f), 0.0f, 1.0f);
+                b.t = std::clamp(b.driveT0 + turn / (slid ? 1.0f : std::max(g_play.openAngle, 0.1f)), 0.0f, 1.0f);
                 if (!b.open && b.t > 0.15f) {
                     b.open = true;   // turned open by hand
                     b.opened = now;
@@ -973,7 +999,7 @@ namespace mrf
             }
         }
         // the open palm pushes it shut (no grip needed): only a move towards closed carries it
-        const bool touching = hinged && !single && b.open && !b.driving && b.held == 0 && spare.valid && !spare.grip && !atBelt &&
+        const bool touching = hinged && !slid && !single && b.open && !b.driving && b.held == 0 && spare.valid && !spare.grip && !atBelt &&
                               now - b.loadedAt > std::chrono::milliseconds(600) && touchesPart(8.0f);
         if (touching) {
             const float angle = hingeAngle(root, spare.palm);
@@ -1303,6 +1329,187 @@ namespace mrf
                                               leverTouch);
             st.armReason = mine ? (atBelt ? kArmBelt : kArmBlock) : kArmNone;
             griphook::setArmed(mine);
+        }
+    }
+
+    // ------------------------------------------------------------ the lever-action rifle (bLeverAction)
+    // After a shot it does not fire again until the lever is worked: the gun hand goes down (the lever opens, the bolt
+    // goes back, the case flies out) and back up (the lever closes, the next round is in). The lever and the bolt move
+    // as the game's own reload has them (its recording); the gun is loaded by the game's reload as before.
+    namespace
+    {
+        struct LeverCycle
+        {
+            std::uint32_t   weapon{ 0 };
+            bool            known{ false };
+            bool            failed{ false };
+            int             lever{ -1 };            // WeaponExtra3 in the recording
+            float           leverFrom{ 0.0f };      // the lever's throw in the recording (s)
+            float           leverTo{ 0.0f };
+            bool            due{ false };           // a shot was fired: the lever is to be worked
+            bool            opened{ false };        // it went all the way down
+            std::uint32_t   live{ 0 };              // rounds left, given back once the lever is closed
+            std::uint32_t   lastAmmo{ 0 };
+            float           top{ 0.0f };            // the gun hand's height (above the feet) when the shot was fired
+            float           t{ 0.0f };              // 0 closed .. 1 open
+            bool            posed{ false };
+            RE::NiTransform leverRest{};
+            RE::NiTransform boltRest{};
+            Clock::time_point dueAt{};
+        };
+        LeverCycle g_lever;
+    }
+
+    void updateLeverAction(RE::PlayerCharacter* player, const Gun& gun, RE::NiAVObject* root, Clock::time_point now) noexcept
+    {
+        auto& L = g_lever;
+        const auto id = gun.weapon->GetFormID();
+        if (L.weapon != id) {
+            L = LeverCycle{};
+            L.weapon = id;
+            L.lastAmmo = gun.data->ammoCount;
+        }
+        if (!L.known) {
+            if (L.failed) {
+                return;
+            }
+            if (!loadPlayed(id) && !(g_play.weapon == id && g_play.parsed)) {
+                L.failed = !g_play.parsed;
+                if (L.failed) {
+                    note("LEVER: no recording of %08X: reload it once as usual, then the lever is worked by hand", id);
+                    return;
+                }
+            }
+            const auto at = g_play.index.find("WeaponExtra3");
+            if (at == g_play.index.end() || !g_play.boltKnown) {
+                L.failed = true;
+                note("LEVER: the recording of %08X has no lever (WeaponExtra3) or no bolt: left to the game", id);
+                return;
+            }
+            const int n = at->second;
+            std::size_t peak = 0;
+            float most = 0.0f;
+            std::vector<float> turn(g_play.frames.size(), 0.0f);
+            for (std::size_t f = 1; f < g_play.frames.size(); ++f) {
+                turn[f] = angleOf(mulAB(colsOf(g_play.frames[f][n]), transposed(colsOf(g_play.frames[0][n]))));
+                if (turn[f] > most) {
+                    most = turn[f];
+                    peak = f;
+                }
+            }
+            std::size_t start = peak;
+            while (start > 0 && turn[start - 1] > 0.035f) {
+                --start;
+            }
+            if (start > 0) {
+                --start;
+            }
+            if (most < 0.3f || peak == 0) {
+                L.failed = true;
+                note("LEVER: the lever hardly moves in the recording (%.1f deg): left to the game", most * 57.29578f);
+                return;
+            }
+            L.lever = n;
+            L.leverFrom = g_play.times[start];
+            L.leverTo = g_play.times[peak];
+            L.known = true;
+            note("LEVER: %08X: the lever turns %.0f deg (%.2f..%.2f s of the recording), the bolt goes back with it; down %.0f with the gun hand works it",
+                id, most * 57.29578f, L.leverFrom, L.leverTo, g_settings.leverDrop);
+        }
+        auto* leverNode = findNamed(root, "WeaponExtra3");
+        auto* boltNode = findNamed(root, g_play.boltName.c_str());
+        const auto& hand = g_hands[g_settings.gunHand];
+        const float height = hand.valid ? hand.wand.translate.z - player->GetPosition().z : 0.0f;
+
+        auto ammo = gun.data->ammoCount;
+        if (!L.due) {
+            if (ammo < L.lastAmmo && hand.valid) {
+                L.due = true;
+                L.opened = false;
+                L.live = ammo;
+                L.top = height;
+                L.dueAt = now;
+                gun.data->ammoCount = 0;   // no next shot until the lever is worked
+                ammo = 0;
+                detail("LEVER: a shot, %u left: work the lever (gun hand down and up)", L.live);
+            }
+            L.lastAmmo = ammo;
+        } else if (L.live == 0) {
+            if (ammo > 0) {
+                L.due = false;   // the last round was fired and the game's own reload loaded it (its animation works the lever)
+                L.t = 0.0f;
+                L.lastAmmo = ammo;
+            }
+        } else {
+            if (ammo > 0) {
+                gun.data->ammoCount = 0;   // the game's own refill while the lever is due is undone
+            }
+            animhook::setBlocking(true);   // and no reload of its own
+        }
+
+        if (L.due && hand.valid) {
+            if (!L.opened && height > L.top) {
+                L.top = height;   // the hand went up first: down is measured from the highest point
+            }
+            const float drop = std::max(L.top - height, 0.0f);
+            const float t = std::clamp(drop / std::max(g_settings.leverDrop, 1.0f), 0.0f, 1.0f);
+            if (!L.opened) {
+                L.t = std::max(L.t, t);
+                if (L.t >= 1.0f) {
+                    L.opened = true;
+                    playSound(1);
+                    buzz(g_settings.gunHand, 1500);
+                    if (looksLikeObject(boltNode)) {
+                        ejectCasings(gun, root, boltNode->world.translate, axisOf(root->world, 0) * 0.6f + axisOf(root->world, 2) * 0.8f, 1, "the lever");
+                    }
+                    detail("LEVER: open, the case is out");
+                }
+            } else {
+                L.t = std::min(L.t, t);
+                if (L.t <= 0.1f) {
+                    L.due = false;
+                    L.t = 0.0f;
+                    if (L.live > 0) {
+                        gun.data->ammoCount = L.live;
+                    }
+                    L.lastAmmo = gun.data->ammoCount;
+                    playSound(3);
+                    buzz(g_settings.gunHand, 2000);
+                    if (g_settings.slideJolt) {
+                        startJolt(axisOf(root->world, 1), 0.6f);
+                    }
+                    detail("LEVER: closed, %u rounds, it fires again", L.live);
+                }
+            }
+        }
+
+        // the pose: ours while the lever is out
+        if (L.t > 0.0f && looksLikeObject(leverNode) && looksLikeObject(leverNode->parent)) {
+            if (!L.posed) {
+                L.leverRest = leverNode->local;
+                if (looksLikeObject(boltNode)) {
+                    L.boltRest = boltNode->local;
+                }
+                L.posed = true;
+            }
+            const float eased = L.t * L.t * (3.0f - 2.0f * L.t);
+            const auto leverPose = playedAt(g_play, L.lever, L.leverFrom + (L.leverTo - L.leverFrom) * eased);
+            leverNode->local = relative(leverNode->parent->world, compose(root->world, leverPose));
+            refreshSubtree(leverNode, RE::NiPoint3{});
+            if (looksLikeObject(boltNode) && looksLikeObject(boltNode->parent)) {
+                boltNode->local = relative(boltNode->parent->world, compose(root->world, boltAt(eased)));
+                refreshSubtree(boltNode, RE::NiPoint3{});
+            }
+        } else if (L.posed) {
+            L.posed = false;
+            if (looksLikeObject(leverNode)) {
+                leverNode->local = L.leverRest;
+                refreshSubtree(leverNode, RE::NiPoint3{});
+            }
+            if (looksLikeObject(boltNode)) {
+                boltNode->local = L.boltRest;
+                refreshSubtree(boltNode, RE::NiPoint3{});
+            }
         }
     }
 }

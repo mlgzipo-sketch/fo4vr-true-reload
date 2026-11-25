@@ -78,6 +78,11 @@ std::atomic<std::uint32_t> g_device{ vr::k_unTrackedDeviceIndexInvalid };
 std::atomic<bool>          g_axis2IsGrip{ false };
 std::atomic<std::uint64_t> g_gripMask{ 1ull << 2 };
 std::atomic<std::uint32_t> g_hidden{ 0 };
+std::atomic<bool>          g_triggerGrab{ false };
+std::atomic<std::uint64_t> g_triggerMask{ 1ull << 33 };
+std::atomic<bool>          g_triggerZone{ false };
+std::atomic<bool>          g_triggerLatched{ false };
+std::atomic<bool>          g_triggerPrevious{ false };
 std::atomic<bool>          g_editing{ false };  // the zone editor: the whole free controller is hidden       // reads answered with the grip hidden (for the log)
 
 // One place decides whose press it is, whoever reads the controller first in a frame.
@@ -97,6 +102,28 @@ void filter(vr::TrackedDeviceIndex_t device, vr::VRControllerState_t& state) noe
         return;
     }
     const auto mask = g_gripMask.load();
+    if (g_triggerGrab.load()) {
+        const auto trigger = g_triggerMask.load();
+        const bool down = (state.ulButtonPressed & trigger) != 0;
+        const bool before = g_triggerPrevious.exchange(down);
+        if (down && !before) {
+            g_triggerLatched.store(g_triggerZone.load());
+        } else if (!down) {
+            g_triggerLatched.store(false);
+        }
+        if (g_triggerLatched.load()) {
+            // the reload's grip: the trigger is the grip for everyone, and not a trigger (the flashlight stays as it is)
+            state.ulButtonPressed &= ~trigger;
+            state.ulButtonTouched &= ~trigger;
+            state.rAxis[1].x = 0.0f;
+            state.ulButtonPressed |= mask;
+            state.ulButtonTouched |= mask;
+            if (g_axis2IsGrip.load()) {
+                state.ulButtonPressed |= 1ull << 34;
+                state.rAxis[2].x = 1.0f;
+            }
+        }
+    }
     arbitrate((state.ulButtonPressed & mask) != 0);
     if (g_editing.load()) {
         state.ulButtonPressed = 0;
@@ -348,5 +375,15 @@ namespace griphook
 namespace griphook
 {
     void setEditing(bool value) noexcept { g_editing.store(value); }
+    void setTriggerGrab(bool on, std::uint64_t triggerMask) noexcept
+    {
+        g_triggerMask.store(triggerMask);
+        g_triggerGrab.store(on);
+        if (!on) {
+            g_triggerLatched.store(false);
+        }
+    }
+    void setTriggerZone(bool atReload) noexcept { g_triggerZone.store(atReload); }
+    bool triggerLatched() noexcept { return g_triggerGrab.load() && g_triggerLatched.load(); }
     bool keyDown(int virtualKey) noexcept { return (GetAsyncKeyState(virtualKey) & 0x8000) != 0; }
 }

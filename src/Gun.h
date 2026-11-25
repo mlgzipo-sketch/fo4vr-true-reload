@@ -40,6 +40,9 @@ namespace mrf
     inline constexpr std::uint32_t kAlienBlaster = 0x000FF995;   // its cover (WeaponExtra1) swings open, one cell (WeaponMagazine) feeds it
     inline constexpr std::uint32_t kGammaGun = 0x000DDB7C;
     inline constexpr std::uint32_t kTeslaRifleLocal = 0x003E07;   // DLCRobot.esm: its handle (WeaponBolt) turns down, its cell (WeaponMagazine) drops out
+    inline constexpr std::uint32_t kHarpoonGunLocal = 0x010B81;   // DLCCoast.esm: its frame (WeaponBolt) goes forward, a harpoon (WeaponExtra1) goes in
+    inline constexpr std::uint32_t kLeverGunLocal = 0x02C8B0;     // DLCCoast.esm: the lever (WeaponExtra3) and the bolt (WeaponBolt)
+    inline constexpr std::uint32_t kWesternRevolverLocal = 0x0415B3;   // DLCNukaWorld.esm: a revolver, all rounds in at once
     // a form of a DLC or another plugin, by its id inside that plugin (its load order index is not known beforehand)
     bool isFormOf(const RE::TESForm* form, std::uint32_t localId, const char* plugin) noexcept;       // three capacitors (WeaponMagazineChild1-3), each into its own socket
     inline constexpr int kPlasmaKind = 23;        // MRF_MagPlasma

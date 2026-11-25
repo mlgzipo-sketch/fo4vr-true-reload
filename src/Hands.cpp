@@ -68,8 +68,14 @@ namespace mrf
                 hand.grip = (state.ulButtonPressed & vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.gripButton))) != 0;
             }
         }
+        if (index == freeIndex() && g_settings.triggerGrab) {
+            // the reload is worked with the trigger: the real grip is left to ROCK (holding the gun, other things)
+            const bool trigger = (hand.buttons & vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.triggerButton))) != 0;
+            hand.grip = trigger && griphook::triggerLatched();
+        }
         if (index == freeIndex()) {
             griphook::setDevice(device);
+            griphook::setTriggerGrab(g_settings.triggerGrab, vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.triggerButton)));
             griphook::setGripMask(vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.gripButton)));
             griphook::arbitrate(hand.grip);
         }

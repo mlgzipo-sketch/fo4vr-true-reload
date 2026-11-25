@@ -18,7 +18,12 @@ namespace mrf
         int   triggerButton{ 33 };
         int   reloadButton{ 7 };        // A / X
         bool  haptics{ true };
+        bool  triggerGrab{ false };        // 1 = the free hand's trigger takes the magazine (belt, gun), the slide and the lever; the grip is ROCK's alone
         bool  teslaHandle{ false };        // 1 = the Tesla rifle (Automatron): the handle turned by hand lets the cell out, turned back closes it
+        bool  harpoonFrame{ false };       // 1 = the harpoon gun (Far Harbor): its frame pushed forward by hand opens it, a harpoon in, pulled back
+        bool  leverAction{ false };        // 1 = the lever-action rifle (Far Harbor): after a shot, the gun hand goes down and back up to work the lever
+        float leverDrop{ 12.0f };          // how far down (game units) the gun hand goes to throw the lever open
+        bool  westernRevolver{ false };    // 1 = the western revolver (Nuka-World): a revolver, all rounds at once, not a magazine
         bool  slideJolt{ false };          // 1 = a slide / bolt slamming home knocks the gun hand forward a little, with a thump
         float slideJoltDistance{ 1.2f };   // how far (game units) at full strength
         int   slideJoltBuzzMs{ 60 };       // how long the gun hand's controller thumps

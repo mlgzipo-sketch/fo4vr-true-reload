@@ -76,6 +76,32 @@ namespace
     using manualreload::runtime::logWarning;
     using namespace mrf;
 
+    // bTriggerGrab: whether a trigger press of the free hand now would be the reload's (at the belt, at the magazine or the
+    // slide, or with something of the reload already in the hand); elsewhere the trigger stays the trigger
+    void updateTriggerZone(RE::PlayerCharacter* player) noexcept
+    {
+        const auto& free = g_hands[freeIndex()];
+        const auto& st = g_state;
+        bool zone = false;
+        if (free.valid) {
+            zone = inBelt(player, free.palm) || st.handRef != 0 || g_beltRound.asked || st.racking || st.place == kHand || st.place == kRailHand ||
+                   st.breech.driving || st.breech.leverHeld || st.breech.held > 0 || g_handleProxy.asked;
+            if (!zone && st.managed) {
+                if (auto* root = weaponRoot(player); looksLikeObject(root)) {
+                    if (palmOnMagazine(root, free.palm)) {
+                        zone = true;
+                    } else if (st.slideCenterKnown &&
+                               distance(free.palm, compose(root->world, pointTransform(st.slideCenter)).translate) < g_settings.slideGrabRadius * 1.5f) {
+                        zone = true;
+                    } else if (st.breech.mech != 0 && distance(free.palm, root->worldBound.center) < root->worldBound.fRadius) {
+                        zone = true;   // a gun that opens: its opening part, the handle, the breech
+                    }
+                }
+            }
+        }
+        griphook::setTriggerZone(zone);
+    }
+
     void update() noexcept
     {
         auto* player = RE::PlayerCharacter::GetSingleton();
@@ -94,6 +120,11 @@ namespace
         readHand(0);
         readHand(1);
         updateJolt();
+        if (g_settings.triggerGrab) {
+            updateTriggerZone(player);
+        } else {
+            griphook::setTriggerZone(false);
+        }
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
         if (g_beltRound.asked && !(g_state.weapon && g_state.weapon->GetFormID() == g_beltRound.weapon && g_state.breech.held > 0)) {
             if (g_beltRound.ref && rocklink::heldBy(freeIndex()) == g_beltRound.ref) {
@@ -149,6 +180,11 @@ namespace
                 kind = kMinigunKind;   // the minigun: its drum comes off and a new one goes on
                 magModel = "Ammo\\5mm\\5mmAmmo.nif";
             }
+            if (kind >= 0 && g_settings.westernRevolver && isFormOf(gun.weapon, kWesternRevolverLocal, "DLCNukaWorld.esm")) {
+                note("The western revolver: its grip mod is no magazine, it opens as a revolver");
+                kind = -1;
+                magModel.clear();
+            }
             if (kind == kGenericKind && !prepareGenericMagModel(magModel)) {
                 kind = -1;   // an old plugin without MRF_MagGeneric: the gun is left to the game
             }
@@ -201,6 +237,11 @@ namespace
             return;
         }
 
+        if (!st.managed && g_settings.leverAction && gun.weapon && gun.data && isFormOf(gun.weapon, kLeverGunLocal, "DLCCoast.esm")) {
+            if (auto* leverRoot = weaponRoot(player); looksLikeObject(leverRoot)) {
+                updateLeverAction(player, gun, leverRoot, now);
+            }
+        }
         if (!st.managed && !st.breech.checked && !st.crankKnown && g_settings.breech && gun.weapon && gun.data) {
             if (auto* drawnRoot = weaponRoot(player); looksLikeObject(drawnRoot)) {
                 st.breech.checked = true;
@@ -218,14 +259,20 @@ namespace
                 } else if (g_settings.teslaHandle && isFormOf(gun.weapon, kTeslaRifleLocal, "DLCRobot.esm")) {
                     st.breech.mech = 4;   // the handle (WeaponBolt) turns open, one cell (WeaponMagazine) feeds it
                     st.breech.handleOpens = true;
+                } else if (g_settings.harpoonFrame && isFormOf(gun.weapon, kHarpoonGunLocal, "DLCCoast.esm")) {
+                    st.breech.mech = 4;   // the frame (WeaponBolt) slides forward on its recorded way, one harpoon (WeaponExtra1) feeds it
+                    st.breech.handleOpens = true;
+                    st.breech.slideOpens = true;
+                } else if (g_settings.westernRevolver && isFormOf(gun.weapon, kWesternRevolverLocal, "DLCNukaWorld.esm")) {
+                    st.breech.mech = 1;   // whatever its nodes are called: the cylinder swings out (WeaponMagazine)
                 } else if (gun.weapon->GetFormID() == kGammaGun) {
                     st.breech.mech = 5;
                 }
-                if (st.breech.mech != 0 && looksLikeObject(findNamed(drawnRoot, kMovingParts[0]))) {
+                if (st.breech.mech != 0 && looksLikeObject(findNamed(drawnRoot, st.breech.slideOpens ? "WeaponBolt" : kMovingParts[0]))) {
                     st.managed = true;
                     note("This gun opens: %s, reloaded by hand",
                         st.breech.mech == 1 ? "a revolver (the cylinder swings out)" : st.breech.mech == 2 ? "a break action" :
-                        st.breech.mech == 4 ? "a cover and a cell" : st.breech.mech == 5 ? "three capacitors" : "one big round at the breech");
+                        st.breech.mech == 4 ? (st.breech.slideOpens ? "a frame pushed forward and a harpoon" : "a cover and a cell") : st.breech.mech == 5 ? "three capacitors" : "one big round at the breech");
                 } else {
                     st.breech.mech = 0;
                 }

@@ -38,5 +38,8 @@ namespace mrf
     // The reload button opens and closes the gun. Open, with the muzzle up, everything falls out of it. Rounds
     // come from the belt in the free hand (a full clip for a revolver, one shell at a time for a break action)
     // and go in at the breech. The free hand on the gun, or a jerk of the gun, closes it.
+    // The lever-action rifle (bLeverAction): after a shot the gun hand goes down and back up to work the lever.
+    void updateLeverAction(RE::PlayerCharacter* player, const Gun& gun, RE::NiAVObject* root, Clock::time_point now) noexcept;
+
     void updateBreech(RE::PlayerCharacter* player, const Gun& gun, RE::NiAVObject* root, Clock::time_point now, float dt) noexcept;
 }
