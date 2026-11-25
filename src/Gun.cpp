@@ -157,8 +157,10 @@ namespace mrf
     {
         // VR draws the gun on the first person skeleton.
         RE::NiAVObject* roots[2]{ player->firstPerson3D.get(), player->Get3D() };
+        // a gun with no magazine node (the harpoon gun) is found by its bolt
+        for (const char* part : { "WeaponMagazine", "WeaponBolt" })
         for (auto* root : roots) {
-            if (auto* magazine = findNamed(root, "WeaponMagazine")) {
+            if (auto* magazine = findNamed(root, part)) {
                 // climb to the node called "Weapon" so the dump shows the whole gun
                 RE::NiAVObject* at = magazine;
                 for (int i = 0; i < 12 && at; ++i) {
