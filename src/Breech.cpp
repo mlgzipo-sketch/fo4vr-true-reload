@@ -931,6 +931,11 @@ namespace mrf
         if (press && griphook::owned() && !b.open && hinged && unlatched && b.held == 0 && touchesPart(14.0f)) {
             b.driving = true;   // the closed gun taken by its opening part: turning it opens the gun
             b.gripInPart = relative(mag->world, pointTransform(spare.palm)).translate;
+            {
+                auto wrist = spare.wrist;
+                wrist.scale = 1.0f;
+                b.palmInWrist = relative(wrist, pointTransform(spare.palm)).translate;
+            }
             b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
             b.driveT0 = 0.0f;
             buzz(freeIndex(), 600);
@@ -974,6 +979,11 @@ namespace mrf
             } else if (hinged && !atBelt && b.held == 0 && touchesPart(14.0f)) {
                 b.driving = true;
                 b.gripInPart = relative(mag->world, pointTransform(spare.palm)).translate;
+            {
+                auto wrist = spare.wrist;
+                wrist.scale = 1.0f;
+                b.palmInWrist = relative(wrist, pointTransform(spare.palm)).translate;
+            }
                 b.driveAngle0 = slid ? slideCoord(spare.palm) : hingeAngle(root, spare.palm);
                 b.driveT0 = b.t;
                 buzz(freeIndex(), 800);
@@ -1012,6 +1022,16 @@ namespace mrf
                     buzz(freeIndex(), 600);
                 }
             }
+        }
+        // a handle moved by hand: the hand is kept on it where it took it (the handle does not slip out of the hand)
+        if (slid && b.driving && spare.valid) {
+            pinHand(handOnPart(spare.wrist, mag->world, b.gripInPart, b.palmInWrist));
+            poseFingers(true);
+            b.handPinned = true;
+        } else if (b.handPinned) {
+            b.handPinned = false;
+            unpinHand();
+            poseFingers(false);
         }
         // the open palm pushes it shut (no grip needed): only a move towards closed carries it
         const bool touching = hinged && !slid && !single && b.open && !b.driving && b.held == 0 && spare.valid && !spare.grip && !atBelt &&

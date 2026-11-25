@@ -96,6 +96,8 @@ namespace mrf
         float             driveAngle0{ 0.0f };
         float             driveT0{ 0.0f };
         RE::NiPoint3      gripInPart{};          // where the hand took the opening part, in its own frame
+        RE::NiPoint3      palmInWrist{};         // ..and the palm in the wrist then (the hand kept on the handle)
+        bool              handPinned{ false };
         bool              pushing{ false };   // the open palm is against the opening part
         float             pushAngle{ 0.0f };
         RE::NiTransform   restInRoot{};       // the opening part closed, in the gun root's frame (zones are drawn there)
