@@ -1,0 +1,5 @@
+; ManualReloadF zones of weapon 2003e07 (Tesla rifle), gun root frame (game units). Edit in the game's zone editor or in Blender.
+; box breech: where the free hand takes the handle (WeaponBolt) that turns open
+box breech lo -9.400 17.400 1.500 hi -4.800 28.400 8.900
+; socket cell: where the new cell goes in (mouth, the way out, side = radius, ahead = depth)
+socket cell mouth -8.800 13.000 4.200 axis -1.000 0.000 0.000 side 3.000 ahead 6.000

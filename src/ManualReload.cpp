@@ -254,6 +254,12 @@ namespace
                 updateLeverAction(player, gun, leverRoot, now);
             }
         }
+        if (!st.managed && !st.breech.checked && !st.breechWhyTold && gun.weapon && gun.data && g_settings.harpoonFrame &&
+            isFormOf(gun.weapon, kHarpoonGunLocal, "DLCCoast.esm")) {
+            st.breechWhyTold = true;
+            note("Harpoon gun: bBreech %d, crank %d, drawn model %s", g_settings.breech ? 1 : 0, st.crankKnown ? 1 : 0,
+                looksLikeObject(weaponRoot(player)) ? "found" : "NOT found");
+        }
         if (!st.managed && !st.breech.checked && !st.crankKnown && g_settings.breech && gun.weapon && gun.data) {
             if (auto* drawnRoot = weaponRoot(player); looksLikeObject(drawnRoot)) {
                 st.breech.checked = true;
@@ -280,6 +286,8 @@ namespace
                 } else if (gun.weapon->GetFormID() == kGammaGun) {
                     st.breech.mech = 5;
                 }
+                note("Breech check of %08X: cylinder %d, shells %d, mech %d (harpoon switch %d, harpoon gun %d)", gun.weapon->GetFormID(), cylinder ? 1 : 0,
+                    shells ? 1 : 0, st.breech.mech, g_settings.harpoonFrame ? 1 : 0, isFormOf(gun.weapon, kHarpoonGunLocal, "DLCCoast.esm") ? 1 : 0);
                 if (st.breech.mech != 0 && looksLikeObject(findNamed(drawnRoot, st.breech.slideOpens ? "WeaponBolt" : kMovingParts[0]))) {
                     st.managed = true;
                     note("This gun opens: %s, reloaded by hand",

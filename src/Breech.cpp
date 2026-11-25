@@ -461,6 +461,7 @@ namespace mrf
             });
             b.known = true;
             if (b.handleOpens) {
+                // where ROCK takes the handle: the middle of the zones file's box breech, or of the handle's model
                 const auto middle = mag->worldBound.fRadius > 0.5f ? mag->worldBound.center : mag->world.translate;
                 b.handleInPart = relative(mag->world, pointTransform(middle)).translate;
                 b.handleInPartKnown = true;
@@ -481,6 +482,13 @@ namespace mrf
             if (!st.zonesChecked && gun.weapon) {
                 st.zonesChecked = true;
                 zonesFor(gun.weapon->GetFormID(), false);
+            }
+            if (b.handleOpens) {
+                if (const auto box = st.zoneBoxes.find("breech"); box != st.zoneBoxes.end()) {
+                    const auto middle = (box->second.first + box->second.second) * 0.5f;
+                    b.handleInPart = relative(b.restInRoot, pointTransform(middle)).translate;
+                    note("ZONES: the handle is taken at (%.1f %.1f %.1f) (box breech)", middle.x, middle.y, middle.z);
+                }
             }
             if (b.handleOpens && !st.breechZone && looksLikeObject(cellNode)) {
                 // no socket drawn: the cell goes back where it stands in the gun
@@ -1046,7 +1054,9 @@ namespace mrf
                     buzz(g_settings.gunHand, 1200);
                     note("OPEN (by hand): %u rounds, %u fired cases", b.live, b.spent);
                 } else if (b.open && b.t <= 0.05f && before > 0.05f) {
-                    b.driving = false;
+                    if (!b.rockHeld) {
+                        b.driving = false;   // ROCK still holding the handle: the hand may open it again
+                    }
                     close("pushed shut by hand");
                 } else if (b.t >= 0.98f && before < 0.98f) {
                     buzz(freeIndex(), 600);
@@ -1391,7 +1401,8 @@ namespace mrf
         if (!spare.grip) {
             // a handle ROCK takes (the Tesla rifle, the harpoon gun) is left to it: the press is not the plugin's there
             const bool onHandle = b.handleOpens && b.handleInPartKnown && b.held == 0 &&
-                                  distance(spare.palm, compose(mag->world, pointTransform(b.handleInPart)).translate) < 10.0f * scale &&
+                                  (partZone ? handIn(*partZone, g_settings.contactMargin, nullptr) :
+                                              distance(spare.palm, compose(mag->world, pointTransform(b.handleInPart)).translate) < 10.0f * scale) &&
                                   !(looksLikeObject(cellNode) && distance(spare.palm, cellAt()) < 8.0f * scale);
             const bool mine = spare.valid && !onHandle && ((b.open && (atBelt || distance(spare.palm, root->world.translate) < g_settings.gunRadius)) ||
                                               (!b.open && hinged && unlatched && !b.handleOpens && touchesPart(0.0f)) ||   // closed: only on the opening part, unlatched

@@ -1,0 +1,5 @@
+; ManualReloadF zones of weapon 3010b81 (harpoon gun), gun root frame (game units). Edit in the game's zone editor or in Blender.
+; box breech: where the free hand takes the frame (WeaponBolt) that is pushed forward
+box breech lo -6.500 22.500 -8.500 hi 0.500 31.000 -2.500
+; socket cell: where the new harpoon goes in (mouth, the way out, side = radius, ahead = depth)
+socket cell mouth 0.000 50.400 -5.700 axis 0.000 0.000 1.000 side 4.000 ahead 10.000

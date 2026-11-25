@@ -205,6 +205,7 @@ namespace mrf
         bool               slideLocked{ false };
         RE::NiPoint3       slideCenter{};
         bool               slideCenterKnown{ false };
+        bool               breechWhyTold{ false };
         // ROCK
         RE::NiPoint3       slidePointInBolt{};             // where the hand takes the slide, in the bolt node's frame
         bool               slidePointKnown{ false };
