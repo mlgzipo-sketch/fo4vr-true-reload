@@ -988,7 +988,7 @@ namespace mrf
                     buzz(freeIndex(), 1200);
                     note("BELT: %u round(s) in the free hand", take);
                 }
-            } else if (cellCover && !atBelt && b.held == 0 && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
+            } else if (cellCover && !b.handleOpens && !atBelt && b.held == 0 && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
                        distance(spare.palm, cellAt()) < 8.0f * scale) {
                 note("The cell is pulled out by hand: %u rounds back to the pouch", b.live);
                 g_throwAmmoItself = true;
