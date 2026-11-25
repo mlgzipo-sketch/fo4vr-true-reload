@@ -24,7 +24,8 @@ namespace griphook
     // as the grip (ROCK holds what the plugin puts in the hand) and the trigger itself is hidden (no flashlight).
     void setTriggerGrab(bool on, std::uint64_t triggerMask) noexcept;
     void setTriggerZone(bool atReload) noexcept;
-    bool triggerLatched() noexcept;               // the trigger is down and works as the reload's grip
+    bool triggerLatched() noexcept;
+    void cancelTrigger() noexcept;               // the trigger took something that is not of the reload: it lets go (until pressed again)               // the trigger is down and works as the reload's grip
     // The controller as it really is. False when there is no hook: read it the usual way.
     bool rawState(std::uint32_t device, void* state, std::uint32_t size) noexcept;
 }

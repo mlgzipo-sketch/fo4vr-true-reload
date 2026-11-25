@@ -83,6 +83,7 @@ std::atomic<std::uint64_t> g_triggerMask{ 1ull << 33 };
 std::atomic<bool>          g_triggerZone{ false };
 std::atomic<bool>          g_triggerLatched{ false };
 std::atomic<bool>          g_triggerPrevious{ false };
+std::atomic<bool>          g_triggerSuppressed{ false };   // a reload press that took nothing of the reload: hidden, and no grip, until let go
 std::atomic<bool>          g_editing{ false };  // the zone editor: the whole free controller is hidden       // reads answered with the grip hidden (for the log)
 
 // One place decides whose press it is, whoever reads the controller first in a frame.
@@ -108,8 +109,15 @@ void filter(vr::TrackedDeviceIndex_t device, vr::VRControllerState_t& state) noe
         const bool before = g_triggerPrevious.exchange(down);
         if (down && !before) {
             g_triggerLatched.store(g_triggerZone.load());
+            g_triggerSuppressed.store(false);
         } else if (!down) {
             g_triggerLatched.store(false);
+            g_triggerSuppressed.store(false);
+        }
+        if (g_triggerSuppressed.load()) {
+            state.ulButtonPressed &= ~trigger;   // the press stays nobody's: no flashlight, and no grab
+            state.ulButtonTouched &= ~trigger;
+            state.rAxis[1].x = 0.0f;
         }
         if (g_triggerLatched.load()) {
             // the reload's grip: the trigger is the grip for everyone, and not a trigger (the flashlight stays as it is)
@@ -385,5 +393,11 @@ namespace griphook
     }
     void setTriggerZone(bool atReload) noexcept { g_triggerZone.store(atReload); }
     bool triggerLatched() noexcept { return g_triggerGrab.load() && g_triggerLatched.load(); }
+    void cancelTrigger() noexcept
+    {
+        if (g_triggerLatched.exchange(false)) {
+            g_triggerSuppressed.store(true);
+        }
+    }
     bool keyDown(int virtualKey) noexcept { return (GetAsyncKeyState(virtualKey) & 0x8000) != 0; }
 }

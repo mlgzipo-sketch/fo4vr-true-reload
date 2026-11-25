@@ -127,6 +127,11 @@ namespace
             const auto& free = g_hands[freeIndex()];
             const bool realGrip = (free.buttons & vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.gripButton))) != 0;
             rocklink::setTakeAllowed(griphook::triggerLatched() || (!realGrip && free.axes[1].x > 0.05f));
+            // the trigger is only for the reload: ROCK holding the gun itself (a support hold) on it, the press is dropped
+            if (griphook::triggerLatched() && g_rock.onGun && rocklink::heldBy(freeIndex()) == 0 && !g_beltRound.asked && g_state.handRef == 0) {
+                griphook::cancelTrigger();
+                detail("TRIGGER: ROCK took the gun itself by the trigger: let go (the grip holds the gun)");
+            }
         } else {
             griphook::setTriggerZone(false);
             rocklink::setTakeAllowed(true);
