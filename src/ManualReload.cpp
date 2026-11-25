@@ -93,6 +93,7 @@ namespace
         }
         readHand(0);
         readHand(1);
+        updateJolt();
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
         if (g_beltRound.asked && !(g_state.weapon && g_state.weapon->GetFormID() == g_beltRound.weapon && g_state.breech.held > 0)) {
             if (g_beltRound.ref && rocklink::heldBy(freeIndex()) == g_beltRound.ref) {

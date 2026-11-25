@@ -64,4 +64,10 @@ namespace mrf
     // pinch: thumb and index on a small handle (a rifle's charging handle or bolt knob), the other fingers kept
     // out of the gun, instead of the whole hand closed round it
     void poseFingers(bool on, bool pinch = false) noexcept;
+
+    // bSlideJolt: the gun hand (and the gun in it) is knocked a little along `worldDirection` and springs back, with a
+    // thump in the controller: a slide or bolt slamming home. `strength` scales fSlideJolt (1 = full).
+    void startJolt(const RE::NiPoint3& worldDirection, float strength) noexcept;
+    // each frame: leads the drawn gun hand through the jolt, then gives it back
+    void updateJolt() noexcept;
 }

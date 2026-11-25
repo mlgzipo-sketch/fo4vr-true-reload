@@ -159,6 +159,70 @@ namespace mrf
         return target;
     }
 
+    namespace
+    {
+        using JoltClock = std::chrono::steady_clock;
+        constexpr const char* kJoltTag = "ManualReloadF_Jolt";
+        struct Jolt
+        {
+            bool               on{ false };
+            JoltClock::time_point at{};
+            RE::NiTransform    wristInWand{};   // the drawn hand on the controller as the jolt began (not read back while we move it)
+            RE::NiPoint3       dirInWand{};     // the way it is knocked, in the controller's frame
+            float              amplitude{ 0.0f };
+        };
+        Jolt g_jolt;
+    }
+
+    void startJolt(const RE::NiPoint3& worldDirection, float strength) noexcept
+    {
+        const auto& hand = g_hands[g_settings.gunHand];
+        if (!g_settings.slideJolt || !hand.valid || !hand.inWandKnown || strength <= 0.0f) {
+            return;
+        }
+        const float length = std::sqrt(dot(worldDirection, worldDirection));
+        if (length < 1e-4f) {
+            return;
+        }
+        const auto dir = worldDirection * (1.0f / length);
+        if (!g_jolt.on) {
+            g_jolt.wristInWand = hand.wristInWand;
+        }
+        g_jolt.dirInWand = relative(hand.wand, pointTransform(hand.wand.translate + dir)).translate;
+        g_jolt.amplitude = g_settings.slideJoltDistance * std::clamp(strength, 0.0f, 2.0f);
+        g_jolt.at = JoltClock::now();
+        g_jolt.on = true;
+    }
+
+    void updateJolt() noexcept
+    {
+        if (!g_jolt.on) {
+            return;
+        }
+        const auto* frik = FRIKApiV2::inst;
+        const auto& hand = g_hands[g_settings.gunHand];
+        const float t = std::chrono::duration<float>(JoltClock::now() - g_jolt.at).count();
+        constexpr float rise = 0.025f;   // knocked out fast
+        constexpr float back = 0.06f;    // and pulled back by the arm
+        constexpr float end = 0.3f;
+        if (t > end || !hand.valid || !frik || !frik->setHandWorldTransform) {
+            if (frik && frik->clearHandWorldTransform) {
+                frik->clearHandWorldTransform(kJoltTag, frikHand(g_settings.gunHand));
+            }
+            g_jolt.on = false;
+            return;
+        }
+        const float f = t < rise ? t / rise : std::exp(-(t - rise) / back) * std::cos((t - rise) * 9.0f);
+        auto target = compose(hand.wand, g_jolt.wristInWand);
+        target.scale = 1.0f;
+        const auto dir = compose(hand.wand, pointTransform(g_jolt.dirInWand)).translate - hand.wand.translate;
+        target.translate = target.translate + dir * (g_jolt.amplitude * f);
+        frik->setHandWorldTransform(kJoltTag, frikHand(g_settings.gunHand), target, 125);
+        if (t * 1000.0f < static_cast<float>(g_settings.slideJoltBuzzMs)) {
+            buzz(g_settings.gunHand, 3999);   // a thump, not a tick: a pulse every frame while it lasts
+        }
+    }
+
     void unpinHand() noexcept
     {
         const auto* frik = FRIKApiV2::inst;

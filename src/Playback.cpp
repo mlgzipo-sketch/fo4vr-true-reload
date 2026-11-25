@@ -813,6 +813,8 @@ namespace mrf
             playSound(3);
             buzz(freeIndex(), 2000);
             buzz(g_settings.gunHand, 1500);
+            // the slide runs home on its spring (let go): a full knock; pushed home by the hand: a light one
+            startJolt(axisOf(root->world, 1), st.racking || st.pushing ? 0.35f : 1.0f);
             note("RACK: slide home, chamber %s, magazine %u", st.chamber ? "loaded" : "empty", st.rounds);
         }
         if (route) {
