@@ -1,0 +1,109 @@
+{
+  "modName": "ManualReloadF",
+  "displayName": "True Reload",
+  "minMcmVersion": 2,
+  "content": [
+    { "text": "Управление", "type": "section" },
+    {
+      "id": "bTriggerGrab:Main",
+      "text": "Перезарядка курком",
+      "type": "switcher",
+      "help": "Выкл: всё делается грипом свободной руки (как раньше). Вкл: грип только держит оружие, а магазин, патроны, затвор, ручки и рамы берутся курком свободной руки. Курок свободной руки тогда не включает фонарик и никогда не берёт само оружие.",
+      "valueOptions": { "sourceType": "ModSettingBool" }
+    },
+    { "text": "Меняется сразу, перезапуск игры не нужен.", "type": "text" }
+  ],
+  "pages": [
+    {
+      "pageDisplayName": "Отдача затвора",
+      "content": [
+        { "text": "Толчок при досылании затвора", "type": "section" },
+        {
+          "id": "bSlideJolt:Main",
+          "text": "Толчок руки и оружия",
+          "type": "switcher",
+          "help": "Затвор, встающий на место, толкает руку с оружием вперёд, с вибрацией.",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        },
+        {
+          "id": "fSlideJolt:Main",
+          "text": "Сила толчка",
+          "type": "slider",
+          "help": "Насколько далеко уходит рука с оружием (игровые единицы).",
+          "valueOptions": { "min": 0.0, "max": 5.0, "step": 0.1, "sourceType": "ModSettingFloat" }
+        },
+        {
+          "id": "fSlideJoltRise:Main",
+          "text": "Плавность толчка",
+          "type": "slider",
+          "help": "Сколько секунд рука уходит вперёд. Больше = мягче.",
+          "valueOptions": { "min": 0.02, "max": 0.3, "step": 0.01, "sourceType": "ModSettingFloat" }
+        },
+        {
+          "id": "fSlideJoltBack:Main",
+          "text": "Возврат руки",
+          "type": "slider",
+          "help": "Как медленно рука возвращается. Больше = медленнее.",
+          "valueOptions": { "min": 0.03, "max": 0.4, "step": 0.01, "sourceType": "ModSettingFloat" }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Оружие DLC",
+      "content": [
+        { "text": "Оружие из дополнений", "type": "section" },
+        {
+          "id": "bTeslaHandle:Main",
+          "text": "Тесла: ручка",
+          "type": "switcher",
+          "help": "Винтовка Теслы: ручку поворачивают рукой, батарея выходит и вставляется.",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        },
+        {
+          "id": "bHarpoonFrame:Main",
+          "text": "Гарпуномёт: рама",
+          "type": "switcher",
+          "help": "Гарпуномёт: раму двигают вперёд рукой, вставляют гарпун, возвращают раму.",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        },
+        {
+          "id": "bLeverAction:Main",
+          "text": "Рычажная винтовка",
+          "type": "switcher",
+          "help": "После выстрела опустите и поднимите руку с винтовкой, чтобы передёрнуть рычаг.",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        },
+        {
+          "id": "fLeverDrop:Main",
+          "text": "Рычаг: насколько опустить руку",
+          "type": "slider",
+          "valueOptions": { "min": 4.0, "max": 30.0, "step": 1.0, "sourceType": "ModSettingFloat" }
+        },
+        {
+          "id": "bWesternRevolver:Main",
+          "text": "Вестерн-револьвер",
+          "type": "switcher",
+          "help": "Заряжается как револьвер, все патроны сразу.",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Прочее",
+      "content": [
+        {
+          "id": "bHaptics:Main",
+          "text": "Вибрация",
+          "type": "switcher",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        },
+        {
+          "id": "bMessages:Main",
+          "text": "Подсказки на экране",
+          "type": "switcher",
+          "valueOptions": { "sourceType": "ModSettingBool" }
+        }
+      ]
+    }
+  ]
+}

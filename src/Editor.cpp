@@ -59,7 +59,7 @@ namespace mrf
         case 0: return { "move, stick = whole size", "size X (sideways)", "size Y (along the barrel)", "size Z (up)", "shift X (sideways)",
             "shift Y (along the barrel)", "shift Z (up)" };
         case 1: return { "move, stick = width", "move, stick = depth", "turn by hand (about the mouth)", "shift X (sideways)", "shift Y (along the barrel)",
-            "shift Z (up)" };
+            "shift Z (up)", "turn forward / back (stick)", "turn sideways (stick)" };
         case 2: {
             std::vector<std::string> modes{ "move all", "turn by hand (about point 1)", "shift X (sideways)", "shift Y (along the barrel)", "shift Z (up)" };
             for (std::size_t i = 0; i < z.pts.size(); ++i) {
@@ -201,6 +201,21 @@ namespace mrf
             z.name = "magtop";
             z.p = st.catchPointKnown ? compose(r, pointTransform(st.catchPointInNode)).translate :
                                        r.translate + (axisOf(r, 0) * st.sideInNode.x + axisOf(r, 1) * st.sideInNode.y + axisOf(r, 2) * st.topAt) * r.scale;
+            ed.zones.push_back(z);
+        }
+        // the magazine well: always there to move and to turn, from the gun as measured if not written yet (0.81)
+        const bool hasWell = std::any_of(ed.zones.begin(), ed.zones.end(), [](const EditZone& z) { return z.type == 1 && z.head == "well"; });
+        if (!hasWell && g_state.railKnown) {
+            const auto& st = g_state;
+            const float scale = st.magRest.scale > 0.0f ? st.magRest.scale : 1.0f;
+            EditZone z;
+            z.type = 1;
+            z.head = "well";
+            z.name = "well (magazine well mouth)";
+            z.axis = st.axis;
+            z.mouth = st.zoneMouthKnown ? st.zoneMouth : st.magRest.translate + st.axis * (st.length - st.topAt * scale);
+            z.side = st.zoneCatchSide > 0.0f ? st.zoneCatchSide : g_settings.catchSide;
+            z.ahead = st.zoneCatchAhead > 0.0f ? st.zoneCatchAhead : g_settings.catchAhead;
             ed.zones.push_back(z);
         }
         // where the palm holds a magazine from the belt: always there to move
@@ -645,7 +660,19 @@ namespace mrf
         if (std::fabs(stick.y) > 0.25f && std::fabs(stick.x) < 0.5f) {
             const float rate = (std::fabs(stick.y) - 0.25f) / 0.75f * 4.0f;   // up to 4 units a second
             const float change = (stick.y > 0.0f ? rate : -rate) * dt;
-            if (const int along = shiftAxisOf(cur, ed.mode); along >= 0) {
+            if (cur.type == 1 && (ed.mode == 6 || ed.mode == 7)) {
+                // the well / socket turned about its mouth by the stick: about the gun's sideways axis (tips it forward or back)
+                // or about the barrel's axis (tips it to a side); up to 24 degrees a second (0.81)
+                const float angle = change * 6.0f * 0.0174533f;
+                const float c = std::cos(angle), sn = std::sin(angle);
+                auto a = cur.axis;
+                if (ed.mode == 6) {
+                    a = RE::NiPoint3{ a.x, a.y * c - a.z * sn, a.y * sn + a.z * c };
+                } else {
+                    a = RE::NiPoint3{ a.x * c + a.z * sn, a.y, -a.x * sn + a.z * c };
+                }
+                cur.axis = normalized(a);
+            } else if (const int along = shiftAxisOf(cur, ed.mode); along >= 0) {
                 RE::NiPoint3 shift{};
                 (along == 0 ? shift.x : along == 1 ? shift.y : shift.z) = change;
                 editorMove(cur, 0, shift);   // the whole zone

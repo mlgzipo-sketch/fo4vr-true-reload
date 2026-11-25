@@ -627,6 +627,44 @@ namespace rocklink
         api::Hand rockHand(int hand) noexcept { return hand == 0 ? api::Hand::Right : api::Hand::Left; }
     }
 
+    // bTriggerGrab: while the trigger works the reload, ROCK may not take the gun itself (a support grip) with the free hand
+    void reserveSupport(int hand, bool on) noexcept
+    {
+        static bool held = false;
+        static api::Status lastStatus = api::Status::Ok;
+        if (!g_grab || !g_grab->acquireHandReservation || !g_grab->renewHandReservation || !g_grab->releaseHandReservation) {
+            return;
+        }
+        if (!on) {
+            if (held) {
+                held = false;
+                g_grab->releaseHandReservation(g_client.owner());
+            }
+            return;
+        }
+        api::grab::HandReservationRequest request{};
+        request.weaponSlot = kSlot;
+        request.hand = rockHand(hand);
+        request.reservation = api::grab::HandReservationKind::ReloadReserved;
+        request.leaseFrames = 15;
+        api::Sample sample{};
+        if (g_grab->getSample) {
+            g_grab->getSample(g_client.owner(), &sample);
+        }
+        request.worldGeneration = sample.worldGeneration;
+        request.skeletonGeneration = sample.skeletonGeneration;
+        request.providerGeneration = sample.providerGeneration;
+        auto status = held ? g_grab->renewHandReservation(g_client.owner(), &request) : api::Status::NotReady;
+        if (status != api::Status::Ok) {
+            status = g_grab->acquireHandReservation(g_client.owner(), &request);
+        }
+        held = status == api::Status::Ok;
+        if (status != lastStatus) {
+            lastStatus = status;
+            say("ROCK: the free hand may not hold the gun while the trigger works the reload (reservation): status %u", static_cast<unsigned>(status));
+        }
+    }
+
     bool forceGrab(int hand, std::uint32_t refFormId, const float point[3]) noexcept
     {
         if (!g_grab || !g_grab->requestForceGrab || !refFormId) {

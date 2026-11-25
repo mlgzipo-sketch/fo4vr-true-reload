@@ -114,6 +114,10 @@ void filter(vr::TrackedDeviceIndex_t device, vr::VRControllerState_t& state) noe
             g_triggerLatched.store(false);
             g_triggerSuppressed.store(false);
         }
+        // the trigger of the free hand is the reload's alone: never the game's (no flashlight), nor anyone else's
+        state.ulButtonPressed &= ~trigger;
+        state.ulButtonTouched &= ~trigger;
+        state.rAxis[1].x = 0.0f;
         if (g_triggerSuppressed.load()) {
             state.ulButtonPressed &= ~trigger;   // the press stays nobody's: no flashlight, and no grab
             state.ulButtonTouched &= ~trigger;

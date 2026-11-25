@@ -12,6 +12,57 @@ namespace mrf
 {
     Settings g_settings;
 
+    namespace
+    {
+        constexpr const char* kMcmSettings = "Data/MCM/Settings/ManualReloadF.ini";
+        // the keys the mod's menu shows (Data/MCM/Config/ManualReloadF/config.json, section Main)
+        constexpr const char* kMcmKeys[]{ "bTriggerGrab", "bSlideJolt", "fSlideJolt", "fSlideJoltRise", "fSlideJoltBack", "bTeslaHandle",
+            "bHarpoonFrame", "bLeverAction", "fLeverDrop", "bWesternRevolver", "bHaptics", "bMessages" };
+    }
+
+    // The menu's file does not exist yet: it is made from the ini as it is, so the menu shows the values in use
+    // (and not its own defaults).
+    void seedMcmSettings() noexcept
+    {
+        try {
+            std::error_code error;
+            if (std::filesystem::exists(kMcmSettings, error)) {
+                return;
+            }
+            std::ifstream in("Data/F4SE/Plugins/ManualReloadF.ini");
+            std::string text = "[Main]\n";
+            int count = 0;
+            for (std::string line; in && std::getline(in, line);) {
+                const auto equals = line.find('=');
+                if (line.empty() || line[0] == ';' || line[0] == '[' || equals == std::string::npos) {
+                    continue;
+                }
+                auto key = line.substr(0, equals);
+                while (!key.empty() && (key.back() == ' ' || key.back() == '\t')) {
+                    key.pop_back();
+                }
+                for (const char* wanted : kMcmKeys) {
+                    if (key == wanted) {
+                        auto value = line.substr(equals + 1);
+                        while (!value.empty() && (value.back() == '\r' || value.back() == ' ' || value.back() == '\t')) {
+                            value.pop_back();
+                        }
+                        text += key + "=" + value + "\n";
+                        ++count;
+                    }
+                }
+            }
+            if (count == 0) {
+                return;
+            }
+            std::filesystem::create_directories("Data/MCM/Settings", error);
+            std::ofstream out(kMcmSettings);
+            out << text;
+            note("Settings: %s made from the ini (%d values) for the mod's menu", kMcmSettings, count);
+        } catch (...) {
+        }
+    }
+
     void loadSettings() noexcept
     {
         struct Entry { const char* key; int type; void* value; };   // 0 bool, 1 int, 2 float
@@ -35,11 +86,13 @@ namespace mrf
             { "bAllGuns", 0, &s.allGuns }, { "bRockParts", 0, &s.rockParts }, { "bRockBeltHandover", 0, &s.rockBeltHandover },
             { "bHoldPoseOnExit", 0, &s.holdPoseOnExit }, { "bBreech", 0, &s.breech }, { "bRecordAnim", 0, &s.recordAnim }, { "bAutoRecord", 0, &s.autoRecord }, { "bRecordedBolt", 0, &s.recordedBolt }, { "bRealInHand", 0, &s.realInHand }, { "bCore2", 0, &s.core2 }, { "fContactMargin", 2, &s.contactMargin }, { "iMarkButton", 1, &s.markButton }, { "bStopEmptyReload", 0, &s.stopEmptyReload }, { "fCatchSide", 2, &s.catchSide }, { "fCatchAhead", 2, &s.catchAhead }, { "fPushFactor", 2, &s.pushFactor }, { "bTraceState", 0, &s.traceState }, { "bBlockAnimReload", 0, &s.blockAnimReload }, { "bTraceAnim", 0, &s.traceAnim }, { "iLateGripMs", 1, &s.lateGripMs }, { "bInjectedInput", 0, &s.injectedInput }, { "fRailBreakAway", 2, &s.railBreakAway }, { "fPartInertia", 2, &s.partInertia }, { "iJamEvery", 1, &s.jamEvery }, { "bGhostGun", 0, &s.ghostGun }, { "fGhostReach", 2, &s.ghostReach }, { "fGhostSide", 2, &s.ghostSide }, { "fGhostCatchAhead", 2, &s.ghostCatchAhead }, { "fCylinderSwing", 2, &s.cylinderSwing },
             { "fBreakAngle", 2, &s.breakAngle }, { "fFlickSpeed", 2, &s.flickSpeed }, { "fFlickTurn", 2, &s.flickTurn }, { "fHingeHold", 2, &s.hingeHold }, { "fBreechRadius", 2, &s.breechRadius }, { "fChamberReach", 2, &s.chamberReach }, { "bRockPlacesHeld", 0, &s.rockPlacesHeld }, { "bNativeSound", 0, &s.nativeSound }, { "iSoundFlags", 1, &s.soundFlags }, { "bShowRound", 0, &s.showRound }, { "fRoundOpenAt", 2, &s.roundOpenAt }, { "fChamberUp", 2, &s.chamberUp },
-            { "fChamberForward", 2, &s.chamberForward }, { "fRoundUp", 2, &s.roundUp }, { "fRoundRotX", 2, &s.roundRotX }, { "fJamTilt", 2, &s.jamTilt }, { "bPinchHandle", 0, &s.pinchHandle }, { "bCarrierMags", 0, &s.carrierMags }, { "bCarrierVanilla", 0, &s.carrierVanilla }, { "bCellPopsOut", 0, &s.cellPopsOut }, { "bSlideJolt", 0, &s.slideJolt }, { "bTeslaHandle", 0, &s.teslaHandle }, { "bTriggerGrab", 0, &s.triggerGrab }, { "bHarpoonFrame", 0, &s.harpoonFrame }, { "bLeverAction", 0, &s.leverAction }, { "fLeverDrop", 2, &s.leverDrop }, { "bWesternRevolver", 0, &s.westernRevolver }, { "fSlideJolt", 2, &s.slideJoltDistance }, { "iSlideJoltBuzzMs", 1, &s.slideJoltBuzzMs }, { "bHandleProxy", 0, &s.handleProxy }, { "bHandleProxyShow", 0, &s.handleProxyShow }, { "fHandleProxySlip", 2, &s.handleProxySlip }, { "bKeepHold", 0, &s.keepHold }, { "bMagSlots", 0, &s.magSlots }, { "fPinchThumb", 2, &s.pinchThumb }, { "fPinchIndex", 2, &s.pinchIndex }, { "fPinchOthers", 2, &s.pinchOthers }, { "fJamOut", 2, &s.jamOut },
+            { "fChamberForward", 2, &s.chamberForward }, { "fRoundUp", 2, &s.roundUp }, { "fRoundRotX", 2, &s.roundRotX }, { "fJamTilt", 2, &s.jamTilt }, { "bPinchHandle", 0, &s.pinchHandle }, { "bCarrierMags", 0, &s.carrierMags }, { "bCarrierVanilla", 0, &s.carrierVanilla }, { "bCellPopsOut", 0, &s.cellPopsOut }, { "bSlideJolt", 0, &s.slideJolt }, { "bTeslaHandle", 0, &s.teslaHandle }, { "bTriggerGrab", 0, &s.triggerGrab }, { "bHarpoonFrame", 0, &s.harpoonFrame }, { "bLeverAction", 0, &s.leverAction }, { "fLeverDrop", 2, &s.leverDrop }, { "bWesternRevolver", 0, &s.westernRevolver }, { "fSlideJolt", 2, &s.slideJoltDistance }, { "iSlideJoltBuzzMs", 1, &s.slideJoltBuzzMs }, { "fSlideJoltRise", 2, &s.slideJoltRise }, { "fSlideJoltBack", 2, &s.slideJoltBack }, { "bHandleProxy", 0, &s.handleProxy }, { "bHandleProxyShow", 0, &s.handleProxyShow }, { "fHandleProxySlip", 2, &s.handleProxySlip }, { "bKeepHold", 0, &s.keepHold }, { "bMagSlots", 0, &s.magSlots }, { "fPinchThumb", 2, &s.pinchThumb }, { "fPinchIndex", 2, &s.pinchIndex }, { "fPinchOthers", 2, &s.pinchOthers }, { "fJamOut", 2, &s.jamOut },
             { "fRoundRotY", 2, &s.roundRotY }, { "fRoundRotZ", 2, &s.roundRotZ }, { "fRoundScale", 2, &s.roundScale }, { "bCasings", 0, &s.casings }, { "bRealRounds", 0, &s.realRounds }, { "fCasingImpulse", 2, &s.casingImpulse }, { "fCasingSpeed", 2, &s.casingSpeed }, { "fCasingSpin", 2, &s.casingSpin }, { "fChamberCaseSpeed", 2, &s.chamberCaseSpeed }, { "iCasingThrowMs", 1, &s.casingThrowMs }, { "fCasingSeconds", 2, &s.casingSeconds }, { "iCasingMax", 1, &s.casingMax },
         };
+        // the ini, then the values set in the mod's menu (MCM writes them to Data/MCM/Settings/ManualReloadF.ini): those win
+        for (const char* path : { "Data/F4SE/Plugins/ManualReloadF.ini", kMcmSettings })
         try {
-            std::ifstream file("Data/F4SE/Plugins/ManualReloadF.ini");
+            std::ifstream file(path);
             std::string line;
             while (file && std::getline(file, line)) {
                 const auto equals = line.find('=');
@@ -95,9 +148,14 @@ namespace mrf
         }
         lastCheck = now;
         std::error_code error;
-        const auto stamp = std::filesystem::last_write_time("Data/F4SE/Plugins/ManualReloadF.ini", error);
+        auto stamp = std::filesystem::last_write_time("Data/F4SE/Plugins/ManualReloadF.ini", error);
         if (error) {
             return false;
+        }
+        std::error_code mcmError;
+        const auto mcm = std::filesystem::last_write_time(kMcmSettings, mcmError);
+        if (!mcmError && mcm > stamp) {
+            stamp = mcm;   // changed in the mod's menu
         }
         if (!known) {
             known = true;
@@ -109,7 +167,7 @@ namespace mrf
         }
         seen = stamp;
         loadSettings();
-        note("Settings: the ini changed on disk and was read again");
+        note("Settings: the ini (or the mod's menu) changed and was read again");
         return true;
     }
 }

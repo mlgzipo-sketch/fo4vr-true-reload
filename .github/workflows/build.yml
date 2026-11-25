@@ -113,6 +113,7 @@ jobs:
           Copy-Item zones\*.txt "$plugins\ManualReloadF_zones"
           Copy-Item -Recurse Meshes package\Meshes
           Copy-Item -Recurse Textures package\Textures
+          Copy-Item -Recurse MCM package\MCM
           python tools\build_esp.py package\ManualReloadF.esp
           Compress-Archive -Path package\* -DestinationPath ManualReloadF.zip
 

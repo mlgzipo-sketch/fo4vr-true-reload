@@ -71,4 +71,6 @@ namespace mrf
     void startJolt(const RE::NiPoint3& worldDirection, float strength) noexcept;
     // each frame: leads the drawn gun hand through the jolt, then gives it back
     void updateJolt() noexcept;
+    // how far the jolt has the gun hand out this frame (world; zero when there is none): the drawn gun is moved as much
+    RE::NiPoint3 joltShift() noexcept;
 }

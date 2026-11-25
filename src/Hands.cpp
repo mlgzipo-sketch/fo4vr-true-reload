@@ -179,7 +179,10 @@ namespace mrf
             float              amplitude{ 0.0f };
         };
         Jolt g_jolt;
+        RE::NiPoint3 g_joltShift{};   // how far the jolt has the hand out this frame (world)
     }
+
+    RE::NiPoint3 joltShift() noexcept { return g_joltShift; }
 
     void startJolt(const RE::NiPoint3& worldDirection, float strength) noexcept
     {
@@ -209,21 +212,31 @@ namespace mrf
         const auto* frik = FRIKApiV2::inst;
         const auto& hand = g_hands[g_settings.gunHand];
         const float t = std::chrono::duration<float>(JoltClock::now() - g_jolt.at).count();
-        constexpr float rise = 0.025f;   // knocked out fast
-        constexpr float back = 0.06f;    // and pulled back by the arm
-        constexpr float end = 0.3f;
+        // 0.81: eased over several frames (it was out in one frame: it looked like a jump), and the gun goes with the hand
+        const float rise = std::max(g_settings.slideJoltRise, 0.01f);   // knocked out, eased
+        const float back = std::max(g_settings.slideJoltBack, 0.02f);   // and pulled back by the arm, slowly, without a bounce
+        const float end = rise + back * 5.0f;
         if (t > end || !hand.valid || !frik || !frik->setHandWorldTransform) {
             if (frik && frik->clearHandWorldTransform) {
                 frik->clearHandWorldTransform(kJoltTag, frikHand(g_settings.gunHand));
             }
             g_jolt.on = false;
+            g_joltShift = {};
             return;
         }
-        const float f = t < rise ? t / rise : std::exp(-(t - rise) / back) * std::cos((t - rise) * 9.0f);
+        float f;
+        if (t < rise) {
+            const float u = t / rise;
+            f = u * u * (3.0f - 2.0f * u);   // smoothstep
+        } else {
+            const float u = (t - rise) / back;
+            f = std::exp(-u) * (1.0f + u) * (1.0f - std::exp(-(end - t) / back * 3.0f));   // critically damped, ends at 0
+        }
         auto target = compose(hand.wand, g_jolt.wristInWand);
         target.scale = 1.0f;
         const auto dir = compose(hand.wand, pointTransform(g_jolt.dirInWand)).translate - hand.wand.translate;
-        target.translate = target.translate + dir * (g_jolt.amplitude * f);
+        g_joltShift = dir * (g_jolt.amplitude * f);
+        target.translate = target.translate + g_joltShift;
         frik->setHandWorldTransform(kJoltTag, frikHand(g_settings.gunHand), target, 125);
         if (t * 1000.0f < static_cast<float>(g_settings.slideJoltBuzzMs)) {
             buzz(g_settings.gunHand, 3999);   // a thump, not a tick: a pulse every frame while it lasts

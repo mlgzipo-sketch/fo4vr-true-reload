@@ -126,7 +126,10 @@ namespace
             // (pressed, or the finger on it with the grip open: ROCK sees the press as the grip in the same frame)
             const auto& free = g_hands[freeIndex()];
             const bool realGrip = (free.buttons & vr::ButtonMaskFromId(static_cast<vr::EVRButtonId>(g_settings.gripButton))) != 0;
-            rocklink::setTakeAllowed(griphook::triggerLatched() || (!realGrip && free.axes[1].x > 0.05f));
+            const bool byTrigger = griphook::triggerLatched() || (!realGrip && free.axes[1].x > 0.05f);
+            rocklink::setTakeAllowed(byTrigger);
+            // and the trigger never takes the gun itself: ROCK is told the free hand may not hold it (0.81)
+            rocklink::reserveSupport(freeIndex(), byTrigger && !realGrip && g_state.weapon != nullptr);
             // the trigger is only for the reload: ROCK holding the gun itself (a support hold) on it, the press is dropped
             if (griphook::triggerLatched() && g_rock.onGun && rocklink::heldBy(freeIndex()) == 0 && !g_beltRound.asked && g_state.handRef == 0) {
                 griphook::cancelTrigger();
@@ -135,6 +138,7 @@ namespace
         } else {
             griphook::setTriggerZone(false);
             rocklink::setTakeAllowed(true);
+            rocklink::reserveSupport(freeIndex(), false);
         }
         // a real round in the hand belongs to the gun it came for: another gun, or none, and it is gone
         if (g_beltRound.asked && !(g_state.weapon && g_state.weapon->GetFormID() == g_beltRound.weapon && g_state.breech.held > 0)) {
@@ -1180,6 +1184,42 @@ namespace
     }
 
     // the frame update with a clock on it: a frame that takes long is written to the log (to find hitches)
+    // bSlideJolt: the drawn gun goes out with the gun hand (ROCK places the gun by the controller, not by the drawn hand,
+    // so moving the hand alone left the gun where it was). The gun's root is moved for the frame and given back the next.
+    void moveGunWithJolt() noexcept
+    {
+        static RE::NiAVObject* node = nullptr;
+        static RE::NiPoint3 added{};
+        static RE::NiPoint3 written{};
+        const auto shift = joltShift();
+        const bool jolting = dot(shift, shift) > 1e-8f;
+        if (!jolting && !node) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* root = player && player->Get3D() ? weaponRoot(player) : nullptr;
+        if (node && node == root && looksLikeObject(node)) {
+            const auto d = node->local.translate - written;
+            if (dot(d, d) < 1e-8f) {
+                node->local.translate = node->local.translate - added;   // nobody set it again: our shift is taken back
+            }
+        }
+        node = nullptr;
+        added = {};
+        if (!looksLikeObject(root) || !looksLikeObject(root->parent)) {
+            return;
+        }
+        if (jolting) {
+            const auto& parent = root->parent->world;
+            const auto local = relative(parent, pointTransform(parent.translate + shift)).translate;
+            root->local.translate = root->local.translate + local;
+            node = root;
+            added = local;
+            written = root->local.translate;
+        }
+        refreshSubtree(root, {});
+    }
+
     void timedUpdate() noexcept
     {
         using clock = std::chrono::steady_clock;
@@ -1190,6 +1230,7 @@ namespace
         const auto start = clock::now();
         g_memoryEpoch.fetch_add(1, std::memory_order_relaxed);
         update();
+        moveGunWithJolt();
         const auto end = clock::now();
         const double ms = std::chrono::duration<double, std::milli>(end - start).count();
         if (ms > 2.0) {
@@ -1306,6 +1347,7 @@ namespace manualreload::runtime
 
     void onLoad() noexcept
     {
+        seedMcmSettings();
         loadSettings();
         const auto* papyrus = F4SE::GetPapyrusInterface();
         if (!papyrus || !papyrus->Register(registerNatives)) {

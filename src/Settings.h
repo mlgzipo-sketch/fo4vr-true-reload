@@ -27,6 +27,8 @@ namespace mrf
         bool  slideJolt{ false };          // 1 = a slide / bolt slamming home knocks the gun hand forward a little, with a thump
         float slideJoltDistance{ 1.2f };   // how far (game units) at full strength
         int   slideJoltBuzzMs{ 60 };       // how long the gun hand's controller thumps
+        float slideJoltRise{ 0.07f };      // seconds the hand and the gun take to go out
+        float slideJoltBack{ 0.09f };      // ..and how slowly they come back (the time constant)
         bool  messages{ true };
         bool  hideGrip{ true };         // hide the free hand's grip from other mods while it works a magazine
         bool  blockTwoHand{ true };     // no second-hand hold on the gun while its magazine is out
@@ -143,6 +145,7 @@ namespace mrf
 
     // reads the ini into g_settings (missing keys keep their defaults)
     void loadSettings() noexcept;
+    void seedMcmSettings() noexcept;   // the mod menu's values file, made once from the ini
     // the ini is read again when it changed on disk (checked every two seconds); true when it was
     bool reloadSettingsIfChanged() noexcept;
 }

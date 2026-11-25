@@ -361,7 +361,8 @@ namespace mrf
             link.magazine.drive = true;   // ROCK's collision of the opening part goes where it is drawn
             link.magazine.parentLocal = toLinkPose(b.drawnLocal);
         }
-        if (b.handleOpens && b.handleInPartKnown) {
+        if (b.handleOpens && b.handleInPartKnown && b.held == 0 && !g_beltRound.asked) {
+            // (0.81: not while a cell / a harpoon is in the hand: the hand that brings the harpoon took the frame instead)
             // the handle is ROCK's to take (a real hold on the gun's part, as a slide): the plugin moves the part, the hand goes with it
             link.magazine.grab = true;
             link.magazine.point[0] = b.handleInPart.x;
@@ -1206,6 +1207,13 @@ namespace mrf
                 d = 1e9f;
                 bool in = test(palmIn, 0.0f);
                 in = test(noseIn, 0.0f) || in;
+                if (b.slideOpens && b.held > 0) {
+                    // the harpoon gun: a harpoon is long, any of it in the socket drawn is in (0.81)
+                    for (float k = -15.0f; k <= 40.0f; k += 2.5f) {
+                        const auto along = relative(root->world, pointTransform(spare.palm + axisOf(spare.wand, 1) * (k * scale))).translate;
+                        in = test(along, 1.5f) || in;
+                    }
+                }
                 if (roundObject) {
                     const float radius = roundObject->worldBound.fRadius / std::max(scale, 0.01f);
                     const auto centerIn = relative(root->world, pointTransform(roundObject->worldBound.center)).translate;
