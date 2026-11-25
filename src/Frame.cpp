@@ -113,6 +113,11 @@ namespace mrf
         const int state = rocklink::forceGrabState(&failure);
         // the grip read as open for a frame or two while the hand is handed over is not a let go
         static Clock::time_point gripLostAt{};
+        static std::uint32_t gripLostFor = 0;   // the time is this magazine's: a new one starts afresh
+        if (gripLostFor != st.handRef) {
+            gripLostFor = st.handRef;
+            gripLostAt = Clock::time_point{};
+        }
         if (free.valid && free.grip) {
             gripLostAt = Clock::time_point{};
         } else if (gripLostAt == Clock::time_point{}) {

@@ -6,6 +6,7 @@
 #include <RE/Fallout.h>
 
 #include <atomic>
+#include <chrono>
 #include <cctype>
 #include <mutex>
 #include <string>
@@ -20,6 +21,19 @@ namespace mrf::animhook
         Notify_t           g_original{ nullptr };
         void**             g_slot{ nullptr };
         std::atomic<bool>  g_blocking{ false };
+        std::atomic<long long> g_blockingSetMs{ 0 };   // when the plugin's frame last said so: an old word does not count
+
+        long long nowMs()
+        {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        }
+
+        // refused only while the plugin's frame keeps saying so: a frame that stopped (a fault, a menu, the plugin
+        // gone quiet) leaves the game's own reload working
+        bool blockingNow()
+        {
+            return g_blocking && nowMs() - g_blockingSetMs < 500;
+        }
         std::atomic<unsigned> g_blocked{ 0 };
         std::atomic<bool>  g_refused{ false };
         std::atomic<bool>  g_started{ false };
@@ -50,10 +64,10 @@ namespace mrf::animhook
                 ++count;
                 // every name once, then reload events (a few) and everything else with bTraceAnim
                 if (count == 1 || (reloadish && count <= 40) || (g_settings.traceAnim && count <= 200)) {
-                    note("ANIM: event '%s'%s", text ? text : "", g_blocking ? " (gun reloaded by hand)" : "");
+                    note("ANIM: event '%s'%s", text ? text : "", blockingNow() ? " (gun reloaded by hand)" : "");
                 }
             }
-            if (g_blocking && g_settings.blockReload && g_settings.blockAnimReload && startsReload(name)) {
+            if (blockingNow() && g_settings.blockReload && g_settings.blockAnimReload && startsReload(name)) {
                 const auto n = ++g_blocked;
                 g_refused = true;
                 if (n <= 20 || n % 50 == 0) {
@@ -92,6 +106,7 @@ namespace mrf::animhook
 
     void setBlocking(bool value) noexcept
     {
+        g_blockingSetMs = nowMs();
         if (g_blocking.exchange(value) != value) {
             g_blocked = 0;
             note("ANIM: the game's reload is %s", value ? "refused (gun reloaded by hand)" : "let through");

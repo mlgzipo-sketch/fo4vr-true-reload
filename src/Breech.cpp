@@ -1053,12 +1053,15 @@ namespace mrf
                 }
                 if (!click && clickWas && now - clickDown < std::chrono::milliseconds(900) && gun.weapon) {
                     const auto hold = holdAgainst(spare.wand, object->world);
-                    if (squareRotation(hold))
-                    writeHoldLine(gun.weapon->GetFormID(), "roundhold", hold);
-                    st.roundHold = hold;
-                    st.roundHoldKnown = true;
-                    hud("Round grip saved for the belt (a grip saved in ROCK wins over it)");
-                    buzz(freeIndex(), 3000);
+                    if (squareRotation(hold)) {
+                        writeHoldLine(gun.weapon->GetFormID(), "roundhold", hold);
+                        st.roundHold = hold;
+                        st.roundHoldKnown = true;
+                        hud("Round grip saved for the belt (a grip saved in ROCK wins over it)");
+                        buzz(freeIndex(), 3000);
+                    } else {
+                        note("ROUND: the grip read now is broken (not square): not saved");
+                    }
                 }
                 clickWas = click;
             }

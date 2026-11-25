@@ -838,4 +838,26 @@ namespace mrf
             }
         }
     }
+
+    void forgetLastSession() noexcept
+    {
+        g_casings.clear();
+        g_casingWays.clear();
+        g_flying.clear();
+        g_looseRounds.clear();
+        g_beltRound = BeltRound{};
+        g_roundOrphans = 0;
+        g_handleProxy = HandleProxy{};
+        g_proxyOrphans = 0;
+        g_round = RoundState{};
+        g_nextCasingToken = kCasingTokenBase;
+        {
+            std::scoped_lock guard(g_shared.lock);
+            g_shared.commands.clear();
+            g_shared.current = PendingCommand{};
+            g_shared.newMags.clear();
+            g_shared.fresh.clear();
+        }
+        note("Loaded: objects of the last session are forgotten");
+    }
 }

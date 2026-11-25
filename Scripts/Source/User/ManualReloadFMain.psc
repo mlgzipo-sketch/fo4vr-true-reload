@@ -49,7 +49,8 @@ Function Handle()
 			Spawn(ManualReloadF.CommandKind(), ManualReloadF.CommandPose(), ManualReloadF.CommandToken(), ManualReloadF.CommandScale())
 		elseif cmd == CmdDelete
 			ObjectReference ref = Game.GetForm(ManualReloadF.CommandRefID()) as ObjectReference
-			if ref
+			; only this mod's own things: an id from before a load may name something else now
+			if ref && IsOurs(ref)
 				ref.Disable()
 				ref.Delete()
 			endif
@@ -63,6 +64,14 @@ Function Handle()
 		n += 1
 		cmd = ManualReloadF.PollCommand()
 	endwhile
+EndFunction
+
+bool Function IsOurs(ObjectReference ref)
+	Form base = ref.GetBaseObject()
+	if !base
+		return false
+	endif
+	return MRF_Mags.Find(base) >= 0 || base == MRF_Round
 EndFunction
 
 Function Spawn(int kind, float[] pose, int token, float scale)
@@ -103,7 +112,8 @@ Function Casing(int kind, float[] pose, float[] impulse, int token)
 	if kind < 0 || kind >= MRF_Mags.GetSize()
 		return
 	endif
-	ObjectReference c = Game.GetPlayer().PlaceAtMe(MRF_Mags.GetAt(kind), 1, true, true, true)
+	; not kept in the save for good: a case the plugin forgets (a load, a crash) is cleaned up by the game
+	ObjectReference c = Game.GetPlayer().PlaceAtMe(MRF_Mags.GetAt(kind), 1, false, true, true)
 	if !c
 		return
 	endif

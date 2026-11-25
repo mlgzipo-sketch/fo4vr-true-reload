@@ -1134,20 +1134,39 @@ namespace
         }
     }
 
+    // a fault inside the frame update: whatever the hand was doing is given back (ROCK's grip, the drawn hand),
+    // so a half-done step does not keep the hand pinned or the grip hidden from ROCK
+    void recoverFromFault() noexcept
+    {
+        static unsigned faults = 0;
+        ++faults;
+        if (faults <= 5 || faults % 100 == 0) {
+            char text[128];
+            std::snprintf(text, sizeof(text), "A fault inside the frame update was caught (%u so far); the hand is given back to ROCK", faults);
+            logWarning(text);
+        }
+        releaseHand();
+        griphook::setArmed(false);
+        griphook::setOwned(false);
+        animhook::setBlocking(false);
+        g_state.racking = false;
+    }
+
     void FRIK_CALL onFrikFrame(std::uint32_t, void*) noexcept
     {
         static std::uint64_t frames = 0;
         if (++frames % 5400 == 1) {
             logNote("frame update is running");
         }
+        static bool faulted = false;
         __try {
             timedUpdate();
         } __except (1) {
-            static bool logged = false;
-            if (!logged) {
-                logged = true;
-                logWarning("A fault inside the frame update was caught; ManualReloadF keeps running");
-            }
+            faulted = true;
+        }
+        if (faulted) {
+            faulted = false;
+            recoverFromFault();
         }
     }
 
@@ -1190,6 +1209,8 @@ namespace
         griphook::setOwned(false);
         g_loose.clear();
         g_pending.clear();
+        forgetLastSession();
+        animhook::setBlocking(false);
         g_state = State{};
         logNote("ManualReloadF ready (build " MANUALRELOAD_BUILD ")");
     }

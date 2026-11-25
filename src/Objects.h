@@ -173,6 +173,10 @@ namespace mrf
 
     extern RoundState g_round;
 
+    // A save was loaded (or a new game started): every object of the last session the plugin knew by its form id
+    // is forgotten (those ids may name other things now), and commands and answers still on their way are dropped.
+    void forgetLastSession() noexcept;
+
     void hideRound() noexcept;
 
     void takeRound(std::uint32_t ref) noexcept;
