@@ -353,7 +353,7 @@ namespace mrf
         rocklink::Frame link{};
         link.gun = true;
         link.freeHand = freeIndex();
-        const char* partName = b.mech == 4 ? "WeaponExtra1" : kMovingParts[0];   // the part that opens
+        const char* partName = b.mech == 4 ? (b.handleOpens ? "WeaponBolt" : "WeaponExtra1") : kMovingParts[0];   // the part that opens
         link.magazine.node = partName;
         link.bolt.node = kMovingParts[1];
         if (b.drawn) {
@@ -371,7 +371,8 @@ namespace mrf
         const bool cellCover = b.mech == 4;   // alien blaster: one cell is all its rounds
         const bool capacitors = b.mech == 5;  // gamma gun: three capacitors, then it is loaded
         auto* cellNode = cellCover ? findNamed(root, kMovingParts[0]) : nullptr;
-        const bool played = !cellCover && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
+        // the Tesla rifle's handle turns as its recording shows (the alien blaster's cover only by its zones file)
+        const bool played = (!cellCover || b.handleOpens) && !capacitors && gun.weapon && loadPlayed(gun.weapon->GetFormID());
         const bool zoneHinge = !played && st.zoneHinge.arc;   // no recording: the turn drawn in Blender
         if (zoneHinge) {
             g_play.axis = st.zoneHinge.axis;
@@ -435,6 +436,13 @@ namespace mrf
             if (!st.zonesChecked && gun.weapon) {
                 st.zonesChecked = true;
                 zonesFor(gun.weapon->GetFormID(), false);
+            }
+            if (b.handleOpens && !st.breechZone && looksLikeObject(cellNode)) {
+                // no socket drawn: the cell goes back where it stands in the gun
+                const auto at = cellNode->worldBound.fRadius > 0.5f ? cellNode->worldBound.center : cellNode->world.translate;
+                st.breechMouth = relative(root->world, pointTransform(at)).translate;
+                st.breechReach = 8.0f;
+                note("Tesla: the cell goes in at (%.1f, %.1f, %.1f); the handle (WeaponBolt) opens it", st.breechMouth.x, st.breechMouth.y, st.breechMouth.z);
             }
             b.live = gun.data->ammoCount;
             b.lastAmmo = b.live;
@@ -507,7 +515,7 @@ namespace mrf
             st.buttonSince = now;
         }
         if (!buttonNow && buttonBefore && now - st.buttonSince < std::chrono::milliseconds(600) && now - b.toggled > std::chrono::milliseconds(400) &&
-            !menuOpen()) {
+            !menuOpen() && !b.handleOpens) {
             if (b.open) {
                 close("the button");
             } else {
@@ -840,8 +848,11 @@ namespace mrf
         // the alien blaster: its cell pops out by itself as the cover opens (as pulling it by hand)
         // where the cell itself is: its geometry hangs on WeaponMagazineChild1, 27 off the WeaponMagazine node (that is behind the grip)
         const auto cellAt = [&]() {
-            auto* geometry = findNamed(root, "WeaponMagazineChild1");
-            return looksLikeObject(geometry) ? geometry->world.translate : cellNode->world.translate;
+            auto* geometry = b.handleOpens ? nullptr : findNamed(root, "WeaponMagazineChild1");
+            if (looksLikeObject(geometry)) {
+                return geometry->world.translate;
+            }
+            return cellNode->worldBound.fRadius > 0.5f ? cellNode->worldBound.center : cellNode->world.translate;
         };
         static Clock::time_point poppedFor{};   // once each time the cover opens: a new cell put in stays in (logs of 0.76.3)
         if (cellCover && g_settings.cellPopsOut && b.open && b.t >= 0.6f && b.live + b.spent > 0 && looksLikeObject(cellNode) &&
@@ -988,7 +999,7 @@ namespace mrf
             b.pushing = false;
         }
         // the alien blaster: with a cell in, the open hand touching the cover shuts it
-        if (cellCover && b.open && b.live > 0 && b.held == 0 && spare.valid && !spare.grip && !atBelt &&
+        if (cellCover && !b.handleOpens && b.open && b.live > 0 && b.held == 0 && spare.valid && !spare.grip && !atBelt &&
             now - b.loadedAt > std::chrono::milliseconds(300) && touchesPart(8.0f)) {
             close("the cover touched");
         }

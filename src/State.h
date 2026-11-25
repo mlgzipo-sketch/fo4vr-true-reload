@@ -66,6 +66,8 @@ namespace mrf
         int               mech{ 0 };        // 0 none, 1 revolver, 2 break action, 3 one big round at a breech (Fat Man, missile launcher),
                                             // 4 a cover and one cell (alien blaster), 5 three capacitors in three sockets (gamma gun)
         std::uint32_t     caps{ 0 };        // mech 5: capacitors in
+        bool              handleOpens{ false };   // mech 4 with a handle (the Tesla rifle): the free hand turns the handle (WeaponBolt)
+                                                  // open and shut; the button and a touch do nothing
         RE::NiTransform   cellRest{};       // mech 4: the cell node as it stands in the gun
         bool              cellRestKnown{ false };
         bool              checked{ false };

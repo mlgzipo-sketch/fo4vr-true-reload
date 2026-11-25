@@ -191,4 +191,14 @@ namespace mrf
             return true;
         });
     }
+
+    bool isFormOf(const RE::TESForm* form, std::uint32_t localId, const char* plugin) noexcept
+    {
+        if (!form) {
+            return false;
+        }
+        auto* data = RE::TESDataHandler::GetSingleton();
+        const auto* wanted = data ? data->LookupForm(localId, plugin) : nullptr;
+        return wanted && wanted->GetFormID() == form->GetFormID();
+    }
 }

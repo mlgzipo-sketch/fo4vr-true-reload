@@ -288,7 +288,18 @@ namespace mrf
         bool moving = false;
         if (!st.boltBoxUsed && atRest && looksLikeObject(bolt) && st.kind == kGenericKind) {
             for (const auto& source : rocklink::bodiedSources()) {
-                if (source.name.empty() || !looksLikeObject(findNamed(bolt, source.name.c_str()))) {
+                auto* part = source.name.empty() ? nullptr : findNamed(bolt, source.name.c_str());
+                if (!looksLikeObject(part)) {
+                    continue;
+                }
+                // a muzzle device hung on the bolt's node (the radium rifle's barrel and suppressor) is not taken by the
+                // hand: the slide box stays on the bolt itself, not out to the end of the barrel
+                bool onMuzzle = false;
+                for (auto* up = part->parent; up && up != bolt && !onMuzzle; up = up->parent) {
+                    onMuzzle = std::strncmp(up->name.c_str(), "P-Muzzle", 8) == 0;
+                }
+                if (onMuzzle) {
+                    note("  the slide leaves out '%s': it is on the muzzle", source.name.c_str());
                     continue;
                 }
                 for (int i = 0; i < 3; ++i) {

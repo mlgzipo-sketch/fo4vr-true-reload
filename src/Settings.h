@@ -18,6 +18,7 @@ namespace mrf
         int   triggerButton{ 33 };
         int   reloadButton{ 7 };        // A / X
         bool  haptics{ true };
+        bool  teslaHandle{ false };        // 1 = the Tesla rifle (Automatron): the handle turned by hand lets the cell out, turned back closes it
         bool  slideJolt{ false };          // 1 = a slide / bolt slamming home knocks the gun hand forward a little, with a thump
         float slideJoltDistance{ 1.2f };   // how far (game units) at full strength
         int   slideJoltBuzzMs{ 60 };       // how long the gun hand's controller thumps

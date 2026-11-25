@@ -215,6 +215,9 @@ namespace
                 st.breech.mech = cylinder ? 1 : (shells ? 2 : (st.singleShot && st.zoneHinge.arc ? 3 : 0));
                 if (gun.weapon->GetFormID() == kAlienBlaster) {
                     st.breech.mech = 4;
+                } else if (g_settings.teslaHandle && isFormOf(gun.weapon, kTeslaRifleLocal, "DLCRobot.esm")) {
+                    st.breech.mech = 4;   // the handle (WeaponBolt) turns open, one cell (WeaponMagazine) feeds it
+                    st.breech.handleOpens = true;
                 } else if (gun.weapon->GetFormID() == kGammaGun) {
                     st.breech.mech = 5;
                 }
